@@ -65,6 +65,15 @@ public class CustomCacheControllerTest {
         check("aop:method:cache:hello-null", "/cache/custom/default/null");
     }
 
+    @Test
+    public void test_method_cache_all() throws Exception {
+        String cacheKey = "aop:method:cache:hello-all";
+        check(cacheKey, "/cache/custom/default/all");
+        Long expire = redisUtil.getExpire(cacheKey);
+        log.info("expire={}", expire);
+        Assert.isTrue(expire <= 300, "固定缓存时长超过设定值");
+    }
+
     /**
      * 校验处理
      *
