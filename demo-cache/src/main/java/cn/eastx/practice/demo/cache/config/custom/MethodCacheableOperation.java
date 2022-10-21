@@ -59,9 +59,9 @@ public class MethodCacheableOperation {
             return null;
         }
 
-        Boolean notMet = AspectUtil.convertSpelValue(annotation.condition(), joinPoint,
+        Boolean isUnless = AspectUtil.convertSpelValue(annotation.unless(), joinPoint,
                 Boolean.class);
-        if (Boolean.TRUE.equals(notMet)) {
+        if (Boolean.TRUE.equals(isUnless)) {
             // 匹配条件不满足
             return null;
         }
