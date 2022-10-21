@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MethodCacheableOperation {
 
     /**
-     * 缓存Key
+     * 缓存 key
      */
     private String key;
 
@@ -49,7 +49,7 @@ public class MethodCacheableOperation {
     /**
      * 转换注解数据为对应操作类
      *
-     * @param joinPoint aop连接点
+     * @param joinPoint AOP 连接点
      * @return 注解数据对应操作类
      */
     public static MethodCacheableOperation convert(ProceedingJoinPoint joinPoint) {

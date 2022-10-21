@@ -25,6 +25,12 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
+    /**
+     * Redis 模板实例
+     *
+     * @param factory Redis 连接工厂
+     * @return Redis 模板实例
+     */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         ObjectMapper om = new ObjectMapper();
@@ -50,6 +56,12 @@ public class RedisConfig {
         return template;
     }
 
+    /**
+     * Redis 工具类实例
+     *
+     * @param redisTemplate Redis 模板实例
+     * @return Redis 工具类实例
+     */
     @Bean
     @ConditionalOnBean(RedisTemplate.class)
     public RedisUtil redisUtil(RedisTemplate<String, Object> redisTemplate) {

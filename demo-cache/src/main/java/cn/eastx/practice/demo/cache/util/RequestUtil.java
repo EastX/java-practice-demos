@@ -15,6 +15,8 @@ import java.util.Optional;
  */
 public class RequestUtil {
 
+    private RequestUtil() {}
+
     /**
      * 获取 HTTP 请求对象
      *
@@ -28,7 +30,5 @@ public class RequestUtil {
                 .map(ServletRequestAttributes::getRequest)
                 .orElse(null);
     }
-
-    private RequestUtil() {}
 
 }

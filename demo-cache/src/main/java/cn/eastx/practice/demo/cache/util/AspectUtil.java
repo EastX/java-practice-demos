@@ -69,7 +69,7 @@ public class AspectUtil {
     }
 
     /**
-     * 获取方法 key（前缀 + 类名 + # + 方法名 + (param)）
+     * 获取方法 key（类名 + # + 方法名 + (param)）
      *
      * @param joinPoint 连接点
      * @return 默认 key

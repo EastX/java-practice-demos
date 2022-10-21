@@ -18,7 +18,8 @@ import org.springframework.lang.Nullable;
 public enum AspectKeyTypeEnum {
     /**
      * 默认 前缀 + key
-     * 示例：key=hello-world  =>  "aop:method:cache:hello-world"
+     * 示例：key=hello-world
+     *          =>  "aop:method:cache:hello-world"
      */
     DEFAULT {
         @Override
@@ -28,7 +29,8 @@ public enum AspectKeyTypeEnum {
     },
     /**
      * 前缀 + 类名 + # + 方法名
-     * 示例：method=obtainTypeKey  =>  "aop:method:cache:AspectKeyTypeEnum#obtainTypeKey"
+     * 示例：method=obtainTypeKey
+     *          =>  "aop:method:cache:AspectKeyTypeEnum#obtainTypeKey"
      */
     METHOD {
         @Override
@@ -38,7 +40,8 @@ public enum AspectKeyTypeEnum {
     },
     /**
      * 前缀 + 类名 + # + 方法名 + 默认参数
-     * 示例：param={joinPoint=null,data=null}  =>  "aop:method:cache:AspectKeyTypeEnum#obtainTypeKey(null,null)"
+     * 示例：param={joinPoint=null,data=null}
+     *          =>  "aop:method:cache:AspectKeyTypeEnum#obtainTypeKey(null,null)"
      */
     METHOD_PARAM {
         @Override
