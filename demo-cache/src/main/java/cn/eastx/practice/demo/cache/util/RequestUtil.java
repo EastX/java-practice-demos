@@ -1,5 +1,6 @@
 package cn.eastx.practice.demo.cache.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -13,6 +14,7 @@ import java.util.Optional;
  * @author EastX
  * @date 2022/10/20
  */
+@Slf4j
 public class RequestUtil {
 
     private RequestUtil() {}
@@ -25,8 +27,8 @@ public class RequestUtil {
     @Nullable
     public static HttpServletRequest getRequest() {
         return Optional.ofNullable(RequestContextHolder.getRequestAttributes())
-                .filter(attr -> attr instanceof ServletRequestAttributes)
-                .map(attr -> (ServletRequestAttributes) attr)
+                .filter(ServletRequestAttributes.class::isInstance)
+                .map(ServletRequestAttributes.class::cast)
                 .map(ServletRequestAttributes::getRequest)
                 .orElse(null);
     }

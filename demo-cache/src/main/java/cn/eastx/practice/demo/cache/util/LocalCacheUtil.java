@@ -2,6 +2,7 @@ package cn.eastx.practice.demo.cache.util;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
 import java.util.Optional;
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit;
  * @author EastX
  * @date 2022/10/20
  */
+@Slf4j
 public class LocalCacheUtil {
 
     /**

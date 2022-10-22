@@ -1,5 +1,6 @@
 package cn.eastx.practice.demo.cache.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
 import org.springframework.data.geo.Metric;
@@ -22,6 +23,7 @@ import java.util.Set;
  * @author EastX
  * @date 2022/10/20
  */
+@Slf4j
 public class RedisUtil {
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -432,7 +434,7 @@ public class RedisUtil {
      * @param timeout 等待时长
      * @return 移除的元素
      */
-    public Object lBLeftPop(String key, Duration timeout) {
+    public Object lLeftPop(String key, Duration timeout) {
         return redisTemplate.opsForList().leftPop(key, timeout);
     }
 
@@ -443,7 +445,7 @@ public class RedisUtil {
      * @param timeout 等待时长
      * @return
      */
-    public Object lBRightPop(String key, Duration timeout) {
+    public Object lRightPop(String key, Duration timeout) {
         return redisTemplate.opsForList().rightPop(key, timeout);
     }
 
@@ -807,7 +809,7 @@ public class RedisUtil {
      * @param key 缓存 key
      * @return 集合大小，使用 管道/事务 返回null
      */
-    public Long zZCard(String key) {
+    public Long zCard(String key) {
         return redisTemplate.opsForZSet().zCard(key);
     }
 

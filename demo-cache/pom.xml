@@ -22,6 +22,7 @@
         <caffeine.version>2.9.3</caffeine.version>
         <lombok.version>1.18.24</lombok.version>
         <hutool.version>5.8.8</hutool.version>
+        <guava.version>31.1-jre</guava.version>
     </properties>
 
     <dependencies>
@@ -64,6 +65,11 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>${hutool.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
         </dependency>
     </dependencies>
 
