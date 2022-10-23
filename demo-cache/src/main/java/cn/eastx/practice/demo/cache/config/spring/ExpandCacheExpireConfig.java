@@ -32,7 +32,7 @@ public class ExpandCacheExpireConfig {
 
     /**
      * Spring Bean 加载后处理
-     *  获取所有 @Component 注解的 Bean 判断是否存在 @SpringCacheable 进行过期时间修改
+     *  获取所有 @Component 注解的 Bean 判断类中方法是否存在 @SpringCacheable 注解，存在进行过期时间设置
      */
     @PostConstruct
     public void init() {
@@ -52,7 +52,7 @@ public class ExpandCacheExpireConfig {
     }
 
     /**
-     * 利用反射设置配置中的过期时间
+     * 利用反射设置方法注解上配置的过期时间
      *
      * @param method 注解的方法
      */
@@ -67,6 +67,7 @@ public class ExpandCacheExpireConfig {
             cacheNames = annotation.value();
         }
 
+        // 反射获取缓存管理器初始化配置并设值
         Map<String, RedisCacheConfiguration> initialCacheConfiguration =
                 (Map<String, RedisCacheConfiguration>)
                         ReflectUtil.getFieldValue(expandRedisCacheManager, "initialCacheConfiguration");

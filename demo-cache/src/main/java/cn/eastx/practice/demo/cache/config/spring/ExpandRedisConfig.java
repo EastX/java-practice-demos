@@ -42,7 +42,7 @@ public class ExpandRedisConfig {
      * ${expand-cache-config.ttl-map} 获取配置文件信息
      * #{} 是 Spring 表达式，获取 Bean 对象属性
      */
-    @Value("#{${expand-cache-config.ttl-map}}")
+    @Value("#{${expand-cache-config.ttl-map:null}}")
     private Map<String, Long> ttlMap;
 
     /**
@@ -69,18 +69,20 @@ public class ExpandRedisConfig {
                 .prefixCacheNameWith("spring:cache:")
                 // 配置全局缓存过期时间
                 .entryTtl(Duration.ofMinutes(30L));
-        //专门指定某些缓存空间的配置，如果过期时间【主要这里的key为缓存空间名称】
+        // 专门指定某些缓存空间的配置，如果过期时间，这里的 key 为缓存空间名称
         Set<Map.Entry<String, Long>> entrySet =
                 Optional.ofNullable(ttlMap).map(Map::entrySet).orElse(Collections.emptySet());
         Map<String, RedisCacheConfiguration> configMap =
                 Maps.newHashMapWithExpectedSize(entrySet.size());
+        // 代码写死示例
         configMap.put("world", config.entryTtl(Duration.ofSeconds(60)));
         for (Map.Entry<String, Long> entry : entrySet) {
-            //指定特定缓存空间对应的过期时间
+            // 指定特定缓存空间对应的过期时间
             configMap.put(entry.getKey(), config.entryTtl(Duration.ofSeconds(entry.getValue())));
         }
 
         RedisCacheWriter redisCacheWriter = RedisCacheWriter.lockingRedisCacheWriter(factory);
+        // 使用自定义缓存管理器附带自定义参数随机时间，注意此处为全局设定，5-最小随机秒，30-最大随机秒
         return new ExpandRedisCacheManager(redisCacheWriter, config, configMap, 5, 30);
     }
 

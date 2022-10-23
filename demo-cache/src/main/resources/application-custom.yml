@@ -1,7 +1,7 @@
 # 项目自定义公共配置
 
-# Spring Redis Cache 通过配置处理缓存名称过期时长
-# Map 接收，key = 缓存名称，value = 缓存时长，单位秒
+# Spring Redis Cache 通过配置处理缓存空间名称过期时长
+# Map 接收，key = 缓存空间名称，value = 缓存时长，单位秒
 expand-cache-config:
   ttl-map: '{"yml-ttl":1000,"hello":2000}'
 

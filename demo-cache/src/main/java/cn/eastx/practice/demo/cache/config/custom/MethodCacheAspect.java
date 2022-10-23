@@ -55,7 +55,7 @@ public class MethodCacheAspect {
             return convertCacheData(result);
         }
 
-        // 加锁减少重复查库
+        // 加锁处理同步执行
         synchronized (operation.getKey().intern()) {
             result = getCacheData(operation);
             if (Objects.nonNull(result)) {
