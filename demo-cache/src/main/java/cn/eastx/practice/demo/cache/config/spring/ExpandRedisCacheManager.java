@@ -60,7 +60,9 @@ public class ExpandRedisCacheManager extends RedisCacheManager {
             }
         }
 
-        return new ExpandRedisCache(theName, cacheWriter, cacheConfig, minRandomSecond, maxRandomSecond);
+        // 使用自定义缓存处理器附带自定义参数随机时间，将注入的随机时间传递
+        return new ExpandRedisCache(theName, cacheWriter, cacheConfig, this.minRandomSecond,
+                this.maxRandomSecond);
     }
 
 }

@@ -105,7 +105,7 @@ public class ExpandRedisCache extends RedisCache {
     }
 
     /**
-     * 根据失效时间的范围随机生成一个Duration
+     * 根据失效时间的范围随机生成一个 Duration
      *
      * @param cacheValue 缓存值
      */
@@ -115,8 +115,8 @@ public class ExpandRedisCache extends RedisCache {
             return Duration.ofSeconds(30);
         }
 
-        int randomInt = RandomUtil.randomInt(minRandomSecond, maxRandomSecond);
-        return cacheConfig.getTtl().plus(Duration.ofSeconds(randomInt));
+        int randomInt = RandomUtil.randomInt(this.minRandomSecond, this.maxRandomSecond);
+        return this.cacheConfig.getTtl().plus(Duration.ofSeconds(randomInt));
     }
 
 }

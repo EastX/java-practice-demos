@@ -21,7 +21,8 @@ public class ExpandKeyGenerator implements KeyGenerator {
 
     @Override
     public Object generate(Object target, Method method, Object... params) {
-        ExpandCacheable annotation = AnnotatedElementUtils.findMergedAnnotation(method, ExpandCacheable.class);
+        ExpandCacheable annotation =
+                AnnotatedElementUtils.findMergedAnnotation(method, ExpandCacheable.class);
         if (Objects.isNull(annotation) || StrUtil.isBlank(annotation.spelKey())) {
             String paramStr = JSONUtil.toJsonStr(params).replace("\"", "");
             return AspectUtil.getMethodKey(target, method, paramStr);
