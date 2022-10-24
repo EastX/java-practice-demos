@@ -105,7 +105,7 @@ public class ExpandRedisCache extends RedisCache {
     }
 
     /**
-     * 根据失效时间的范围随机生成一个 Duration
+     * 获取动态时长
      *
      * @param cacheValue 缓存值
      */

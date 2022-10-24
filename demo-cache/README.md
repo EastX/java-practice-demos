@@ -82,7 +82,7 @@
 ### 3.1 Spring Cache 整合 Redis
 > 利用 Spring Cache 处理 Redis 缓存数据。
 
-#### 时间处理 1 ：配置注入缓存管理器时，根据配置或代码写死指定缓存时长
+#### 1 ：配置注入缓存管理器时，根据配置或代码写死指定缓存时长
 - yml 配置缓存空间名称与缓存时长对应关系 [`application-custom.yml`](./src/main/resources/application-custom.yml)
     ```yml
     # Spring Redis Cache 通过配置处理缓存空间名称过期时长
@@ -135,7 +135,7 @@
     }
     ```
 
-#### 时间处理 2 ：利用缓存空间名附带时间，创建缓存处理器时更新缓存时长
+#### 2 ：利用缓存空间名附带时间，创建缓存处理器时更新缓存时长
 - 使用示例：`@Cacheable(cacheNames = "prefix#5m", cacheManager = "expandRedisCacheManager")`
 - 自定义 Redis 缓存管理器 [`ExpandRedisCacheManager.java`](./src/main/java/cn/eastx/practice/demo/cache/config/spring/ExpandRedisCacheManager.java)
     - 重写创建缓存执行器逻辑，支持缓存空间名称中附带缓存时间根据指定符号分隔
@@ -159,22 +159,7 @@
     }
     ```
 
-#### 时间处理 3 ：继承缓存处理器执行缓存设置时增加随机时长
-- 自定义 Redis 缓存执行器 [`ExpandRedisCache.java`](./src/main/java/cn/eastx/practice/demo/cache/config/spring/ExpandRedisCache.java)
-    - 重写缓存处理器设值逻辑，支持调整配置时长增加随机时间、null 存储短时间
-    ```java
-    private Duration getDynamicDuration(Object cacheValue) {
-        // 如果缓存值为 null，固定返回时长为 30s 避免缓存穿透
-        if (NullValue.INSTANCE.equals(cacheValue)) {
-            return Duration.ofSeconds(30);
-        }
-
-        int randomInt = RandomUtil.randomInt(this.minRandomSecond, this.maxRandomSecond);
-        return this.cacheConfig.getTtl().plus(Duration.ofSeconds(randomInt));
-    }
-    ```
-
-#### 时间处理 4 ：自定义缓存注解实现通过属性配置时长
+#### 3 ：自定义缓存注解实现通过属性配置时长
 - 自定义缓存注解 [`ExpandCacheable.java`](./src/main/java/cn/eastx/practice/demo/cache/config/spring/ExpandCacheable.java)
     - 使用 `@Cacheable` 标识，可支持 Spring Cache 处理
     - 增加 `spelKey()` 支持 SpEL key 生成处理，需要与自定义缓存 key 生成器搭配
@@ -245,6 +230,31 @@
     }
     ```
 
+#### 4 ：继承缓存处理器执行缓存设置时增加随机时长
+- 自定义 Redis 缓存执行器 [`ExpandRedisCache.java`](./src/main/java/cn/eastx/practice/demo/cache/config/spring/ExpandRedisCache.java)
+  - 重写缓存处理器设值逻辑，支持调整配置时长增加随机时间、null 存储短时间
+    ```java
+    @Override
+    public void put(Object key, @Nullable Object value) {
+      Object cacheValue = preProcessCacheValue(value);
+      // 替换父类设置缓存时长处理
+      Duration duration = getDynamicDuration(cacheValue);
+      cacheWriter.put(name, createAndConvertCacheKey(key),
+      serializeCacheValue(cacheValue), duration);
+    }
+    
+    // 获取动态时长
+    private Duration getDynamicDuration(Object cacheValue) {
+        // 如果缓存值为 null，固定返回时长为 30s 避免缓存穿透
+        if (NullValue.INSTANCE.equals(cacheValue)) {
+            return Duration.ofSeconds(30);
+        }
+
+        int randomInt = RandomUtil.randomInt(this.minRandomSecond, this.maxRandomSecond);
+        return this.cacheConfig.getTtl().plus(Duration.ofSeconds(randomInt));
+    }
+    ```
+
 **测试**
 - Spring Cache 整合 Redis 处理示例 Controller [`ExpandSpringCacheController.java`](./src/main/java/cn/eastx/practice/demo/cache/controller/ExpandSpringCacheController.java)
     - 示例代码
@@ -284,10 +294,8 @@
 - [聊聊如何基于spring @Cacheable扩展实现缓存自动过期时间以及自动刷新](https://mp.weixin.qq.com/s/zzJH-enXlLZovV8h0RCR6Q)
 - [SpringBoot实现Redis缓存（SpringCache+Redis的整合）](https://blog.csdn.net/user2025/article/details/106595257)
 
-### 3.2 自定义实现
-> 使用 Spring AOP 切面对方法调用结果进行缓存。
-
-**实现方式：** Spring AOP + 注解
+### 3.2 自定义 AOP 实现
+> 使用 Spring AOP 切面对注解拦截，处理方法调用结果缓存。
 
 **核心类：**
 - 方法缓存注解 [`MethodCacheable.java`](./src/main/java/cn/eastx/practice/demo/cache/config/custom/MethodCacheable.java)
