@@ -25,7 +25,7 @@ public class ExpandKeyGenerator implements KeyGenerator {
                 AnnotatedElementUtils.findMergedAnnotation(method, ExpandCacheable.class);
         if (Objects.isNull(annotation) || StrUtil.isBlank(annotation.spelKey())) {
             String paramStr = JSONUtil.toJsonStr(params).replace("\"", "");
-            return AspectUtil.getMethodKey(target, method, paramStr);
+            return AspectUtil.getMethodKey(method, paramStr);
         }
 
         // SpEL 支持

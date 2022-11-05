@@ -2,13 +2,13 @@ package cn.eastx.practice.demo.cache.util;
 
 import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.lang.Nullable;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
@@ -22,26 +22,6 @@ import java.lang.reflect.Parameter;
 public class AspectUtil {
 
     private AspectUtil() {}
-
-    /**
-     * 转换 SpEL 解析表达式
-     * 示例：${1==1} => true
-     *
-     * @param spelStr SpEL字符串
-     * @param joinPoint 连接点
-     * @param desiredResultType 期望结果类型
-     * @return 转换 SpEL 表达式后的值
-     */
-    @Nullable
-    public static <T> T convertSpelValue(String spelStr, ProceedingJoinPoint joinPoint,
-                                         @Nullable Class<T> desiredResultType) {
-        if (StrUtil.isBlank(spelStr)) {
-            return null;
-        }
-
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        return convertSpelValue(spelStr, signature.getMethod(), joinPoint.getArgs(), desiredResultType);
-    }
 
     /**
      * 转换 SpEL 解析表达式
@@ -97,25 +77,13 @@ public class AspectUtil {
     /**
      * 获取方法 key（类名 + # + 方法名 + (param)）
      *
-     * @param joinPoint 连接点
-     * @return 方法 key
-     */
-    public static String getMethodKey(ProceedingJoinPoint joinPoint, String param) {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        return getMethodKey(joinPoint.getTarget(), signature.getMethod(), param);
-    }
-
-    /**
-     * 获取方法 key（类名 + # + 方法名 + (param)）
-     *
-     * @param target 代理对象
      * @param method 方法对象
      * @param param 参数
      * @return 方法 key
      */
-    public static String getMethodKey(Object target, Method method, String param) {
+    public static String getMethodKey(Method method, String param) {
         StringBuilder sb = new StringBuilder()
-                .append(target.getClass().getSimpleName())
+                .append(method.getDeclaringClass().getSimpleName())
                 .append("#")
                 .append(method.getName());
         if (StrUtil.isNotBlank(param)) {
@@ -123,6 +91,27 @@ public class AspectUtil {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 查找方法或类上的注解（优先方法，没有则方法所在类）
+     *
+     * @param method 方法对象
+     * @param annotationType 注解类型
+     * @param <A> 注解类型泛型
+     * @return 注解对象，查询不到为null
+     */
+    @Nullable
+    public static <A extends Annotation> A findMethodOrClassAnnotation(Method method,
+                                                                       @Nullable Class<A> annotationType) {
+        // 优先从方法上获取注解
+        A annotation = AnnotationUtils.findAnnotation(method, annotationType);
+        if (annotation != null) {
+            return annotation;
+        }
+
+        // 从类上获取注解
+        return AnnotationUtils.findAnnotation(method.getDeclaringClass(), annotationType);
     }
 
 }

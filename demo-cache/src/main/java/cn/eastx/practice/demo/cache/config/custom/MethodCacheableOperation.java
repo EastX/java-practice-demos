@@ -59,8 +59,8 @@ public class MethodCacheableOperation {
             return null;
         }
 
-        Boolean isUnless = AspectUtil.convertSpelValue(annotation.unless(), joinPoint,
-                Boolean.class);
+        Boolean isUnless = AspectUtil.convertSpelValue(annotation.unless(), method,
+                joinPoint.getArgs(), Boolean.class);
         if (Boolean.TRUE.equals(isUnless)) {
             // 匹配条件不满足
             return null;
@@ -68,7 +68,7 @@ public class MethodCacheableOperation {
 
         AspectKeyTypeEnum.KeyTypeData data = AspectKeyTypeEnum.KeyTypeData.builder()
                 .prefix("method:cache").key(annotation.key()).build();
-        String key = annotation.keyType().obtainTypeKey(joinPoint, data);
+        String key = annotation.keyType().obtainTypeKey(method, joinPoint.getArgs(), data);
         if (StrUtil.isBlank(key)) {
             return null;
         }

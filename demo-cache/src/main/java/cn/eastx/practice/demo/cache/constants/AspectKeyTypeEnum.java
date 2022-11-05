@@ -6,8 +6,9 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import lombok.Builder;
 import lombok.Data;
-import org.aspectj.lang.ProceedingJoinPoint;
 import org.springframework.lang.Nullable;
+
+import java.lang.reflect.Method;
 
 /**
  * AOP 切面 key 类型枚举
@@ -23,7 +24,7 @@ public enum AspectKeyTypeEnum {
      */
     DEFAULT {
         @Override
-        public String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data) {
+        public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
             return data.getPrefix() + data.getKey();
         }
     },
@@ -34,8 +35,8 @@ public enum AspectKeyTypeEnum {
      */
     METHOD {
         @Override
-        public String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data) {
-            return data.getPrefix() + AspectUtil.getMethodKey(joinPoint, null);
+        public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
+            return data.getPrefix() + AspectUtil.getMethodKey(method, null);
         }
     },
     /**
@@ -45,9 +46,9 @@ public enum AspectKeyTypeEnum {
      */
     METHOD_PARAM {
         @Override
-        public String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data) {
-            String paramStr = JSONUtil.toJsonStr(joinPoint.getArgs()).replace("\"", "");
-            return data.getPrefix() + AspectUtil.getMethodKey(joinPoint, paramStr);
+        public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
+            String paramStr = JSONUtil.toJsonStr(methodParams).replace("\"", "");
+            return data.getPrefix() + AspectUtil.getMethodKey(method, paramStr);
         }
     },
     /**
@@ -58,9 +59,10 @@ public enum AspectKeyTypeEnum {
      */
     METHOD_SPEL_PARAM {
         @Override
-        public String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data) {
-            String paramStr = AspectUtil.convertSpelValue(data.getKey(), joinPoint, String.class);
-            return data.getPrefix() + AspectUtil.getMethodKey(joinPoint, paramStr);
+        public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
+            String paramStr = AspectUtil.convertSpelValue(data.getKey(), method, methodParams,
+                    String.class);
+            return data.getPrefix() + AspectUtil.getMethodKey(method, paramStr);
         }
     },
     /**
@@ -71,8 +73,9 @@ public enum AspectKeyTypeEnum {
      */
     SPEL {
         @Override
-        public String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data) {
-            return data.getPrefix() + AspectUtil.convertSpelValue(data.getKey(), joinPoint, String.class);
+        public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
+            return data.getPrefix() + AspectUtil.convertSpelValue(data.getKey(), method,
+                    methodParams, String.class);
         }
     },
     /**
@@ -82,7 +85,7 @@ public enum AspectKeyTypeEnum {
      */
     IP {
         @Override
-        public String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data) {
+        public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
             return data.getPrefix() + IpUtil.getIpAddr();
         }
     },
@@ -91,11 +94,13 @@ public enum AspectKeyTypeEnum {
     /**
      * 获取 AOP 切面 key
      *
-     * @param joinPoint 连接点
-     * @return AOP切面key
+     * @param method 方法对象
+     * @param methodParams 方法参数值数组
+     * @param data 其他自定义数据
+     * @return AOP 切面 key
      */
     @Nullable
-    public abstract String obtainTypeKey(ProceedingJoinPoint joinPoint, KeyTypeData data);
+    public abstract String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data);
 
     /**
      * AOP 切面 key 类型传入数据
