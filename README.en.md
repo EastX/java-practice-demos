@@ -19,9 +19,10 @@
 </p>
 
 ### Modules
-| Name | Introduce |
-| --- | --- |
-| [demo-cache](./demo-cache) | Cache practices<br>Features: cache tools, method cache component (based on AOP) |
+| Name | Introduce                                                                                         |
+| --- |---------------------------------------------------------------------------------------------------|
+| [demo-cache](./demo-cache) | Cache practices<br>Features: cache tools, method cache annotation component (based on Spring AOP) |
+| [demo-ratelimit](./demo-ratelimit) | Rate limit practices<br>Features: rate limit annotation component (based on Spring Interceptor) |
 
 ### Tools
 | Name | Download Address |

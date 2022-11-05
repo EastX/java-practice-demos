@@ -11,6 +11,7 @@
 
     <modules>
         <module>demo-cache</module>
+        <module>demo-ratelimit</module>
     </modules>
 
     <properties>
