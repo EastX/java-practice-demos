@@ -23,6 +23,7 @@
 |------------------------------------|-----------------------------------------|
 | [demo-cache](./demo-cache)         | 缓存实践<br>功能：缓存工具、方法缓存注解组件（基于 Spring AOP） |
 | [demo-ratelimit](./demo-ratelimit) | 限流实践<br>功能：限流注解组件（基于 Spring 拦截器） |
+| [demo-crypto](./demo-crypto) | 数据加密实践<br>功能：加密工具、数据库隐私字段加密注解组件（基于 MyBatis 拦截器、TypeHandler） |
 
 ### 工具
 | 名称 | 下载地址 |

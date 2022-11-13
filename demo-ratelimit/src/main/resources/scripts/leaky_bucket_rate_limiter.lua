@@ -1,5 +1,4 @@
 -- 漏桶限流
--- 此处算法
 
 -- 限流 key ， hash 保存限流相关信息
 local key = KEYS[1];

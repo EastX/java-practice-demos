@@ -12,6 +12,7 @@
     <modules>
         <module>demo-cache</module>
         <module>demo-ratelimit</module>
+        <module>demo-crypto</module>
     </modules>
 
     <properties>

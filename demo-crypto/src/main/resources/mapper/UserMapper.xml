@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.eastx.practice.demo.crypto.dao.UserMapper">
+
+    <!-- 通用查询映射结果 -->
+    <!-- 使用自定义SQL时，对于加密处理需要使用ResultMap作为返回对象，否则对解析成实际数据会存在问题 -->
+    <resultMap id="BaseResultMap" type="cn.eastx.practice.demo.crypto.pojo.po.User">
+        <result column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="password" property="password" />
+        <result column="salt" property="salt" />
+        <result column="phone" property="phone" typeHandler="cn.eastx.practice.demo.crypto.config.mp.OverallCryptoTypeHandler" />
+        <result column="email" property="email" typeHandler="cn.eastx.practice.demo.crypto.config.mp.FuzzyCryptoTypeHandler" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="All_Columns">
+        id, name, password, salt, phone, email, create_time, update_time
+    </sql>
+
+    <select id="getByPhoneEmail" resultMap="BaseResultMap">
+        SELECT <include refid="All_Columns"></include>
+        FROM crypto_user
+        <where>
+            <if test="phone != null">
+                AND phone = #{phone}
+            </if>
+            AND id > 0
+            <if test="email != null">
+                AND email LIKE CONCAT("%", #{email}, "%")
+            </if>
+        </where>
+        LIMIT 1
+    </select>
+
+    <select id="getByPhoneEmailNonPrepare" resultMap="BaseResultMap">
+        SELECT <include refid="All_Columns"></include>
+        FROM crypto_user
+        <where>
+            <if test="phone != null">
+                AND phone = #{phone}
+            </if>
+            AND id > 0
+            <if test="email != null">
+                AND email LIKE '%${email}%'
+            </if>
+        </where>
+        LIMIT 1
+    </select>
+
+</mapper>
