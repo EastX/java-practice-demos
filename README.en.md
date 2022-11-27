@@ -19,11 +19,12 @@
 </p>
 
 ### Modules
-| Name | Introduce                                                                                         |
-| --- |---------------------------------------------------------------------------------------------------|
+| Name | Introduce |
+| --- | --- |
 | [demo-cache](./demo-cache) | Cache practices<br>Features: cache tools, method cache annotation component (based on Spring AOP) |
 | [demo-ratelimit](./demo-ratelimit) | Rate limit practices<br>Features: rate limit annotation component (based on Spring Interceptor) |
-| [demo-crypto](./demo-crypto) | Data crypto practice<br>Features：crypto tools、database privacy field crypto annotation component (based on MyBatis Interceptor, TypeHandler) |
+| [demo-crypto](./demo-crypto) | Data crypto practice<br>Features: crypto tools、database privacy field crypto annotation component (based on MyBatis Interceptor, TypeHandler) |
+| [demo-lock](./demo-lock) | Lock practice<br>Features: distributed lock tool |
 
 ### Tools
 | Name | Download Address |

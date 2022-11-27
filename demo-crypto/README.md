@@ -17,7 +17,7 @@
     <a href="https://baomidou.com/">
         <img alt="MyBatis-Plus" src="https://img.shields.io/badge/MyBatis Plus-3.5.2-1e77a9.svg"/>
     </a>
-    <a href="https ://github.com/JSQLParser/JSqlParser/wiki">
+    <a href="https://github.com/JSQLParser/JSqlParser/wiki">
         <img alt="JSqlParser" src="https://img.shields.io/badge/JSqlParser-4.5-1e77a9.svg"/>
     </a>
 </p>
@@ -220,15 +220,17 @@
     }
     ```
 
+#### 3. 相关汇总
 **测试**
 - 执行 /resources/db/schema.sql 创建数据库（ java-practice-demos ）、示例表（ crypto-user ）
 - 用户表 Service 层 [`IUserService.java`](./src/main/java/cn/eastx/practice/demo/crypto/service/IUserService.java)
 - 用户表 Service 层 测试 [`UserServiceTest.java`](./src/test/java/cn/eastx/practice/demo/crypto/service/UserServiceTest.java)
+   ![测试结果](../assets/img/crypto_UserServiceTest.png)
 
 **使用问题**
 - TypeHandler 不起效
     - 在 xml 中自定义 ResultMap ，示例：[`UserMapper.xml`](./src/main/resources/mapper/UserMapper.xml)
-    - 在实体类上增加 @TableName(autoResultMap = true) ，自动构建 ResultMap ，示例：[`User.java`](./src/main/java/cn/eastx/practice/demo/crypto/pojo/po/User.java)
+    - 在实体类上增加 `@TableName(autoResultMap = true)` ，自动构建 ResultMap ，示例：[`User.java`](./src/main/java/cn/eastx/practice/demo/crypto/pojo/po/User.java)
     - https://gitee.com/baomidou/mybatis-plus/issues/I103ZO
 - 加密后解密数据乱码
     - 可能是密钥存在问题，建议重新生成
