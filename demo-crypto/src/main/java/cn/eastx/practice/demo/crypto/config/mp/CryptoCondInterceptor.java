@@ -124,35 +124,33 @@ public class CryptoCondInterceptor implements Interceptor {
             return;
         }
 
+        sql = sqlPair.getKey();
         MetaObject paramMetaObject = configuration.newMetaObject(boundSql.getParameterObject());
         List<ParameterMapping> mappings = boundSql.getParameterMappings();
-        sql = sqlPair.getKey();
-        int condParamStart = SqlUtil.getSqlCondParamStartIdx(sql);
 
         int mappingStartIdx = 0;
         int addIdxLen = 0;
         for (SqlCondOperation operation : operationList) {
-            String columnName = operation.getColumnName();
             String condStr = operation.getOriginCond();
-            int condNum = SqlUtil.countPreparePlaceholder(condStr);
+            int prepareNum = SqlUtil.countPreparePlaceholder(condStr);
             CryptoCond ann = condMap.get(operation.getColumnName());
             if (Objects.nonNull(ann)) {
                 // 替换查询条件参数中的列名
-                if (StrUtil.isNotBlank(ann.replacedColumn())
-                        && condParamStart < operation.getOriginCondStartIdx()) {
+                if (StrUtil.isNotBlank(ann.replacedColumn()) && !operation.checkSetCond()) {
                     sql = operation.replaceSqlCond(sql, addIdxLen,
-                            columnName, ann.replacedColumn());
+                            operation.getColumnName(), ann.replacedColumn());
                 }
 
                 // 替换属性值为加密值
-                if (condNum == 0) {
+                if (prepareNum == 0) {
                     // 存在非预编译语句条件，直接替换 SQL 条件值
-                    String propVal = String.valueOf(paramMetaObject.getValue(columnName));
+                    String propVal =
+                            String.valueOf(paramMetaObject.getValue(operation.getColumnName()));
                     String useVal = getCryptoUseVal(ann, propVal);
                     sql = operation.replaceSqlCond(sql, addIdxLen, propVal, useVal);
                 } else {
                     // 预编译语句条件通过替换条件值处理
-                    for (int i = 0; i < condNum; i++) {
+                    for (int i = 0; i < prepareNum; i++) {
                         String propName = mappings.get(mappingStartIdx + i).getProperty();
                         if (!propName.startsWith("et.")) {
                             // 非实体类属性进行值替换，实体类属性通过 TypeHandler 处理
@@ -163,7 +161,7 @@ public class CryptoCondInterceptor implements Interceptor {
                 }
             }
 
-            mappingStartIdx += condNum;
+            mappingStartIdx += prepareNum;
             addIdxLen += operation.getOriginCond().length() - condStr.length();
         }
 

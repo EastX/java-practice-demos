@@ -1,9 +1,8 @@
 package cn.eastx.practice.demo.crypto.config.mp;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.regex.Pattern;
 
 /**
  * SQL 条件对应的操作类
@@ -31,6 +30,11 @@ public class SqlCondOperation {
      * 原始条件字符串开始索引
      */
     private Integer originCondStartIdx;
+
+    /**
+     * 条件类型
+     */
+    private CondTypeEnum condType;
 
     /**
      * 替换 SQL 中的条件字符串
@@ -61,6 +65,30 @@ public class SqlCondOperation {
         this.setOriginCond(replacedCond);
 
         return prefix + replacedCond + suffix;
+    }
+
+    /**
+     * 判断是否为 SET 条件
+     *
+     * @return 是否为 SET 条件
+     */
+    public boolean checkSetCond() {
+        return this.getCondType() == CondTypeEnum.SET;
+    }
+
+    /**
+     * 条件类型枚举
+     */
+    @AllArgsConstructor
+    @Getter
+    public enum CondTypeEnum {
+        WHERE(1, "WHERE 条件", Pattern.compile("(([\\s]+)(and|or)([\\s]+))", Pattern.CASE_INSENSITIVE)),
+        HAVING(2, "HAVING 条件", Pattern.compile("(([\\s]+)(and|or)([\\s]+))", Pattern.CASE_INSENSITIVE)),
+        SET(3, "SET 条件", Pattern.compile("([\\s]*)(,)([\\s]*)", Pattern.CASE_INSENSITIVE)),
+        ;
+        private Integer code;
+        private String info;
+        private Pattern splitPattern;
     }
 
 }

@@ -33,17 +33,7 @@ public class SqlUtil {
      * SQL 条件起始位置匹配正则
      */
     public static Pattern COND_PARAM_START_PATTERN =
-            Pattern.compile("([\\s]+)(where|having)([\\s]+)", Pattern.CASE_INSENSITIVE);
-    /**
-     * SQL 条件操作对象分割正则
-     */
-    public static Pattern COND_OPERATION_PATTERN =
-            Pattern.compile("(([\\s]+)(and|or)([\\s]+))", Pattern.CASE_INSENSITIVE);
-    /**
-     * SQL 条件 UPDATE SET 操作对象分割正则
-     */
-    public static Pattern COND_SET_OPERATION_PATTERN =
-            Pattern.compile("([\\s]*)(,)([\\s]*)", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("([\\s]+)(set|where|having)([\\s]+)", Pattern.CASE_INSENSITIVE);
     /**
      * SQL 条件列名正则
      */
@@ -98,8 +88,12 @@ public class SqlUtil {
     public static List<SqlCondOperation> listSqlCondOperationBySelect(Statement statement) {
         PlainSelect plain = (PlainSelect) ((Select) statement).getSelectBody();
         String sql = statement.toString();
-        List<Expression> expressions = Arrays.asList(plain.getWhere(), plain.getHaving());
-        return expressions2SqlCondOperationList(sql, expressions);
+
+        List<Pair<Expression, SqlCondOperation.CondTypeEnum>> multiCondPairList =
+                new ArrayList<>(2);
+        multiCondPairList.add(Pair.of(plain.getWhere(), SqlCondOperation.CondTypeEnum.WHERE));
+        multiCondPairList.add(Pair.of(plain.getHaving(), SqlCondOperation.CondTypeEnum.HAVING));
+        return expressions2SqlCondOperationList(sql, multiCondPairList);
     }
 
     /**
@@ -116,19 +110,20 @@ public class SqlUtil {
         Matcher setMatcher = COND_UPDATE_SET_PATTERN.matcher(sql);
         setMatcher.find();
         int multiCondStart = setMatcher.start();
+        // 与 Update.toString() 一致获取 SET ...2
         StringBuilder setStrSb = new StringBuilder();
         UpdateSet.appendUpdateSetsTo(setStrSb, update.getUpdateSets());
         setMatcher = COND_UPDATE_SET_PATTERN.matcher(setStrSb.toString());
         String multiCondStr = setMatcher.replaceAll("");
         setMatcher.reset().find();
         multiCondStart += setMatcher.end();
-        Matcher multiCondMatcher = COND_SET_OPERATION_PATTERN.matcher(multiCondStr);
 
         List<SqlCondOperation> resultList = new ArrayList<>();
         resultList.addAll(condStr2SqlCondOperationList(
-                multiCondStr, multiCondStart, multiCondMatcher));
-        List<Expression> expressions = Arrays.asList(update.getWhere());
-        resultList.addAll(expressions2SqlCondOperationList(sql, expressions));
+                multiCondStr, multiCondStart, SqlCondOperation.CondTypeEnum.SET));
+        List<Pair<Expression, SqlCondOperation.CondTypeEnum>> multiCondPairList =
+                Arrays.asList(Pair.of(update.getWhere(), SqlCondOperation.CondTypeEnum.WHERE));
+        resultList.addAll(expressions2SqlCondOperationList(sql, multiCondPairList));
         return resultList;
     }
 
@@ -141,35 +136,37 @@ public class SqlUtil {
     public static List<SqlCondOperation> listSqlCondOperationByDelete(Statement statement) {
         Delete delete = (Delete) statement;
         String sql = statement.toString();
-        List<Expression> expressions = Arrays.asList(delete.getWhere());
-        return expressions2SqlCondOperationList(sql, expressions);
+        List<Pair<Expression, SqlCondOperation.CondTypeEnum>> multiCondPairList =
+                Arrays.asList(Pair.of(delete.getWhere(), SqlCondOperation.CondTypeEnum.WHERE));
+        return expressions2SqlCondOperationList(sql, multiCondPairList);
     }
 
     /**
      * SQL 条件字符串转换为 SQL 条件操作对象集合
      *
      * @param sql SQL 字符串
-     * @param multiCondExpressions 条件字符串解析器集合，包含多个条件
+     * @param multiCondPairList 条件字符串解析器与条件类型对应集合，条件字符串解析器包含多个条件
      * @return SQL 条件操作对象集合
      */
     public static List<SqlCondOperation> expressions2SqlCondOperationList(String sql,
-                                                                          List<Expression> multiCondExpressions) {
-        if (CollectionUtil.isEmpty(multiCondExpressions)) {
+                                                                          List<Pair<Expression, SqlCondOperation.CondTypeEnum>> multiCondPairList) {
+        if (CollectionUtil.isEmpty(multiCondPairList)) {
             return Collections.emptyList();
         }
 
         int prevIdx = 0;
         List<SqlCondOperation> resultList = new ArrayList<>();
-        for (Expression multiCondExpression : multiCondExpressions) {
+        for (Pair<Expression, SqlCondOperation.CondTypeEnum> multiCondPair : multiCondPairList) {
+            Expression multiCondExpression = multiCondPair.getKey();
             if (Objects.isNull(multiCondExpression)) {
                 continue;
             }
 
             String multiCondStr = multiCondExpression.toString();
             int multiCondStart = sql.indexOf(multiCondStr, prevIdx);
-            Matcher multiCondMatcher = COND_OPERATION_PATTERN.matcher(multiCondStr);
+
             resultList.addAll(condStr2SqlCondOperationList(multiCondStr, multiCondStart,
-                    multiCondMatcher));
+                    multiCondPair.getValue()));
             prevIdx = multiCondStart + multiCondStr.length();
         }
 
@@ -179,16 +176,17 @@ public class SqlUtil {
     /**
      * SQL 条件字符串转换为 SQL 条件操作对象集合
      *
-     * @param multiCondStr     条件字符串，包含多个条件
-     * @param multiCondStart   条件字符串起始位置
-     * @param multiCondMatcher 条件字符串匹配正则，SET 使用 ‘,’ ，WHERE/HAVING 使用 and/or
+     * @param multiCondStr 条件字符串，包含多个条件
+     * @param multiCondStart 条件字符串起始位置
+     * @param condTypeEnum 条件类型
      * @return SQL 条件操作对象集合
      */
     public static List<SqlCondOperation> condStr2SqlCondOperationList(String multiCondStr,
                                                                       int multiCondStart,
-                                                                      Matcher multiCondMatcher) {
+                                                                      SqlCondOperation.CondTypeEnum condTypeEnum) {
         int singleCondStart = 0;
         int multiCondStrLen = multiCondStr.length();
+        Matcher multiCondMatcher = condTypeEnum.getSplitPattern().matcher(multiCondStr);
 
         List<SqlCondOperation> resultList = new ArrayList<>();
         while (singleCondStart < multiCondStrLen) {
@@ -208,6 +206,7 @@ public class SqlUtil {
                         .columnName(condMatcher.group().trim())
                         .originCond(singleCondStr)
                         .originCondStartIdx(originalCondStart)
+                        .condType(condTypeEnum)
                         .build();
                 resultList.add(operation);
             }
@@ -260,22 +259,6 @@ public class SqlUtil {
         }
 
         return needSub ? val.substring(startIdx, endIdx) : val;
-    }
-
-    /**
-     * 获取 SQL 条件参数起始位置
-     * 不存在返回 SQL 的长度
-     *
-     * @param sql SQL 语句字符串
-     * @return SQL 条件参数起始位置
-     */
-    public static int getSqlCondParamStartIdx(String sql) {
-        Matcher condParamMatcher = COND_PARAM_START_PATTERN.matcher(sql);
-        if (condParamMatcher.find()) {
-            return condParamMatcher.start();
-        }
-
-        return sql.length();
     }
 
 }
