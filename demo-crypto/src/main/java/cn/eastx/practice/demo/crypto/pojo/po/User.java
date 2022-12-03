@@ -4,6 +4,7 @@ import cn.eastx.practice.demo.crypto.config.mp.CryptoCond;
 import cn.eastx.practice.demo.crypto.config.mp.FuzzyCryptoTypeHandler;
 import cn.eastx.practice.demo.crypto.config.mp.OverallCryptoTypeHandler;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -25,6 +26,7 @@ public class User {
     /**
      * 用户表主键ID
      */
+    @TableId
     private Long id;
 
     /**

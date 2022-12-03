@@ -189,7 +189,7 @@ public class UserServiceTest {
         Assert.isTrue(Objects.nonNull(user), "根据手机号、部分邮箱查不到用户");
 
         user = userService.getByPhoneEmailNonPrepare(addUser.getPhone(), emailPart);
-        log.debug("getByPhoneEmail, user={}", JSONUtil.toJsonStr(user));
+        log.debug("getByPhoneEmailNonPrepare, user={}", JSONUtil.toJsonStr(user));
         Assert.isTrue(Objects.nonNull(user), "根据手机号、部分邮箱（包含非预编译语句）查不到用户");
 
         user = userService.getByPhone(addUser.getPhone());

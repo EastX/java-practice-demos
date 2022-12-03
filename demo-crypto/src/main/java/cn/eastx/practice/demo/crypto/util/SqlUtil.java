@@ -1,7 +1,9 @@
 package cn.eastx.practice.demo.crypto.util;
 
 import cn.eastx.practice.demo.crypto.config.mp.SqlCondOperation;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
+import cn.hutool.core.lang.Pair;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
@@ -12,11 +14,9 @@ import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.update.Update;
+import net.sf.jsqlparser.statement.update.UpdateSet;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,88 +53,82 @@ public class SqlUtil {
      * SQL 条件 UPDATE SET 字符串正则
      */
     public static Pattern COND_UPDATE_SET_PATTERN =
-            Pattern.compile("([\\s]+)(set)((\\s|.)+)(where|limit)([\\s]+)",
-                    Pattern.CASE_INSENSITIVE);
-    /**
-     * SQL 条件 UPDATE SET 字符串排除干扰正则
-     */
-    public static Pattern COND_UPDATE_SET_STR_PATTERN =
-            Pattern.compile("([\\s]+)(set|where|limit)([\\s]+)", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("([\\s]+)(set)([\\s]+)", Pattern.CASE_INSENSITIVE);
 
     private SqlUtil() {}
 
     /**
-     * 获取 SQL 条件操作对象集合
+     * 获取 SQL 与 条件操作对象集合
      *
      * @param sql sql 语句
      * @return SQL 条件操作对象集合
      */
-    public static List<SqlCondOperation> listSqlCondOperation(String sql) {
+    public static Pair<String, List<SqlCondOperation>> getSqlCondOperationPair(String sql) {
         Matcher matcher = COND_PARAM_START_PATTERN.matcher(sql);
         if (!matcher.find()) {
-            return Collections.emptyList();
+            return Pair.of(sql, Collections.emptyList());
         }
-
-        // 重置匹配器
-        matcher.reset();
 
         try {
             Statement statement = CCJSqlParserUtil.parse(sql);
+            String formatSql = statement.toString();
+            List<SqlCondOperation> operationList = Collections.emptyList();
             if (statement instanceof Select) {
-                return listSqlCondOperationBySelect(statement, matcher);
+                operationList = listSqlCondOperationBySelect(statement);
             } else if (statement instanceof Update) {
-                return listSqlCondOperationByUpdate(statement, matcher, sql);
+                operationList = listSqlCondOperationByUpdate(statement);
             } else if (statement instanceof Delete) {
-                return listSqlCondOperationByDelete(statement, matcher);
+                operationList = listSqlCondOperationByDelete(statement);
             }
+
+            return Pair.of(formatSql, operationList);
         } catch (JSQLParserException e) {
             log.error("[listSqlCondOperation]exception={}", ExceptionUtil.stacktraceToString(e));
         }
 
-        return Collections.emptyList();
+        return Pair.of(sql, Collections.emptyList());
     }
 
     /**
      * 获取 SQL 条件操作对象集合（ SELECT 语句）
      *
      * @param statement SELECT 语句体
-     * @param matcher   条件匹配对象
      * @return SQL 条件操作对象集合
      */
-    public static List<SqlCondOperation> listSqlCondOperationBySelect(Statement statement,
-                                                                      Matcher matcher) {
+    public static List<SqlCondOperation> listSqlCondOperationBySelect(Statement statement) {
         PlainSelect plain = (PlainSelect) ((Select) statement).getSelectBody();
-
-        List<SqlCondOperation> resultList = new ArrayList<>();
-        resultList.addAll(expression2SqlCondOperationList(plain.getWhere(), matcher));
-        resultList.addAll(expression2SqlCondOperationList(plain.getHaving(), matcher));
-        return resultList;
+        String sql = statement.toString();
+        List<Expression> expressions = Arrays.asList(plain.getWhere(), plain.getHaving());
+        return expressions2SqlCondOperationList(sql, expressions);
     }
 
     /**
      * 获取 SQL 条件操作对象集合（ UPDATE 语句）
      *
      * @param statement UPDATE 语句体
-     * @param matcher   条件匹配对象
      * @return SQL 条件操作对象集合
      */
-    public static List<SqlCondOperation> listSqlCondOperationByUpdate(Statement statement,
-                                                                      Matcher matcher,
-                                                                      String sql) {
+    public static List<SqlCondOperation> listSqlCondOperationByUpdate(Statement statement) {
         Update update = (Update) statement;
+        String sql = statement.toString();
+
+        // SET 条件
         Matcher setMatcher = COND_UPDATE_SET_PATTERN.matcher(sql);
+        setMatcher.find();
+        int multiCondStart = setMatcher.start();
+        StringBuilder setStrSb = new StringBuilder();
+        UpdateSet.appendUpdateSetsTo(setStrSb, update.getUpdateSets());
+        setMatcher = COND_UPDATE_SET_PATTERN.matcher(setStrSb.toString());
+        String multiCondStr = setMatcher.replaceAll("");
+        setMatcher.reset().find();
+        multiCondStart += setMatcher.end();
+        Matcher multiCondMatcher = COND_SET_OPERATION_PATTERN.matcher(multiCondStr);
 
         List<SqlCondOperation> resultList = new ArrayList<>();
-        if (setMatcher.find()) {
-            Matcher setStrMatcher = COND_UPDATE_SET_STR_PATTERN.matcher(setMatcher.group());
-            String multiCondStr = setStrMatcher.replaceAll("");
-            setStrMatcher.reset().find();
-            Matcher multiCondMatcher = COND_SET_OPERATION_PATTERN.matcher(multiCondStr);
-            resultList.addAll(condStr2SqlCondOperationList2(
-                    multiCondStr, setMatcher.start() + setStrMatcher.end(), multiCondMatcher));
-        }
-
-        resultList.addAll(expression2SqlCondOperationList(update.getWhere(), matcher));
+        resultList.addAll(condStr2SqlCondOperationList(
+                multiCondStr, multiCondStart, multiCondMatcher));
+        List<Expression> expressions = Arrays.asList(update.getWhere());
+        resultList.addAll(expressions2SqlCondOperationList(sql, expressions));
         return resultList;
     }
 
@@ -142,35 +136,44 @@ public class SqlUtil {
      * 获取 SQL 条件操作对象集合（ DELETE 语句）
      *
      * @param statement DELETE 语句体
-     * @param matcher   条件匹配对象
      * @return SQL 条件操作对象集合
      */
-    public static List<SqlCondOperation> listSqlCondOperationByDelete(Statement statement,
-                                                                      Matcher matcher) {
+    public static List<SqlCondOperation> listSqlCondOperationByDelete(Statement statement) {
         Delete delete = (Delete) statement;
-
-        List<SqlCondOperation> resultList = new ArrayList<>();
-        resultList.addAll(expression2SqlCondOperationList(delete.getWhere(), matcher));
-        return resultList;
+        String sql = statement.toString();
+        List<Expression> expressions = Arrays.asList(delete.getWhere());
+        return expressions2SqlCondOperationList(sql, expressions);
     }
 
     /**
      * SQL 条件字符串转换为 SQL 条件操作对象集合
      *
-     * @param multiCondExpression 条件字符串解析器，包含多个条件
-     * @param matcher             条件字符串起始匹配正则
+     * @param sql SQL 字符串
+     * @param multiCondExpressions 条件字符串解析器集合，包含多个条件
      * @return SQL 条件操作对象集合
      */
-    public static List<SqlCondOperation> expression2SqlCondOperationList(Expression multiCondExpression,
-                                                                         Matcher matcher) {
-        if (multiCondExpression == null || !matcher.find()) {
+    public static List<SqlCondOperation> expressions2SqlCondOperationList(String sql,
+                                                                          List<Expression> multiCondExpressions) {
+        if (CollectionUtil.isEmpty(multiCondExpressions)) {
             return Collections.emptyList();
         }
 
-        String multiCondStr = multiCondExpression.toString();
-        int multiCondStart = matcher.end();
-        Matcher multiCondMatcher = COND_OPERATION_PATTERN.matcher(multiCondStr);
-        return condStr2SqlCondOperationList2(multiCondStr, multiCondStart, multiCondMatcher);
+        int prevIdx = 0;
+        List<SqlCondOperation> resultList = new ArrayList<>();
+        for (Expression multiCondExpression : multiCondExpressions) {
+            if (Objects.isNull(multiCondExpression)) {
+                continue;
+            }
+
+            String multiCondStr = multiCondExpression.toString();
+            int multiCondStart = sql.indexOf(multiCondStr, prevIdx);
+            Matcher multiCondMatcher = COND_OPERATION_PATTERN.matcher(multiCondStr);
+            resultList.addAll(condStr2SqlCondOperationList(multiCondStr, multiCondStart,
+                    multiCondMatcher));
+            prevIdx = multiCondStart + multiCondStr.length();
+        }
+
+        return resultList;
     }
 
     /**
@@ -181,9 +184,9 @@ public class SqlUtil {
      * @param multiCondMatcher 条件字符串匹配正则，SET 使用 ‘,’ ，WHERE/HAVING 使用 and/or
      * @return SQL 条件操作对象集合
      */
-    public static List<SqlCondOperation> condStr2SqlCondOperationList2(String multiCondStr,
-                                                                       int multiCondStart,
-                                                                       Matcher multiCondMatcher) {
+    public static List<SqlCondOperation> condStr2SqlCondOperationList(String multiCondStr,
+                                                                      int multiCondStart,
+                                                                      Matcher multiCondMatcher) {
         int singleCondStart = 0;
         int multiCondStrLen = multiCondStr.length();
 

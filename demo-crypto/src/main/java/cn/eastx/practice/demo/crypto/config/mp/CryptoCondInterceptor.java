@@ -2,6 +2,7 @@ package cn.eastx.practice.demo.crypto.config.mp;
 
 import cn.eastx.practice.demo.crypto.util.SqlUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -117,16 +118,19 @@ public class CryptoCondInterceptor implements Interceptor {
     private void replaceHandle(Configuration configuration, Map<String, CryptoCond> condMap,
                                BoundSql boundSql) {
         String sql = boundSql.getSql();
-        List<SqlCondOperation> operationList = SqlUtil.listSqlCondOperation(sql);
+        Pair<String, List<SqlCondOperation>> sqlPair = SqlUtil.getSqlCondOperationPair(sql);
+        List<SqlCondOperation> operationList = sqlPair.getValue();
         if (CollectionUtil.isEmpty(operationList)) {
             return;
         }
 
         MetaObject paramMetaObject = configuration.newMetaObject(boundSql.getParameterObject());
         List<ParameterMapping> mappings = boundSql.getParameterMappings();
+        sql = sqlPair.getKey();
         int condParamStart = SqlUtil.getSqlCondParamStartIdx(sql);
 
         int mappingStartIdx = 0;
+        int addIdxLen = 0;
         for (SqlCondOperation operation : operationList) {
             String columnName = operation.getColumnName();
             String condStr = operation.getOriginCond();
@@ -136,8 +140,8 @@ public class CryptoCondInterceptor implements Interceptor {
                 // 替换查询条件参数中的列名
                 if (StrUtil.isNotBlank(ann.replacedColumn())
                         && condParamStart < operation.getOriginCondStartIdx()) {
-                    sql = sql.replace(condStr,
-                            condStr.replace(columnName, ann.replacedColumn()));
+                    sql = operation.replaceSqlCond(sql, addIdxLen,
+                            columnName, ann.replacedColumn());
                 }
 
                 // 替换属性值为加密值
@@ -145,7 +149,7 @@ public class CryptoCondInterceptor implements Interceptor {
                     // 存在非预编译语句条件，直接替换 SQL 条件值
                     String propVal = String.valueOf(paramMetaObject.getValue(columnName));
                     String useVal = getCryptoUseVal(ann, propVal);
-                    sql = sql.replace(condStr, condStr.replace(propVal, useVal));
+                    sql = operation.replaceSqlCond(sql, addIdxLen, propVal, useVal);
                 } else {
                     // 预编译语句条件通过替换条件值处理
                     for (int i = 0; i < condNum; i++) {
@@ -160,6 +164,7 @@ public class CryptoCondInterceptor implements Interceptor {
             }
 
             mappingStartIdx += condNum;
+            addIdxLen += operation.getOriginCond().length() - condStr.length();
         }
 
         ReflectUtil.setFieldValue(boundSql, "sql", sql);
