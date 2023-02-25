@@ -1,6 +1,7 @@
 package cn.eastx.practice.demo.crypto.service;
 
 import cn.eastx.practice.demo.crypto.pojo.po.User;
+import cn.eastx.practice.demo.crypto.pojo.vo.UserVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -44,5 +45,13 @@ public interface IUserService extends IService<User> {
      * @return 用户数据
      */
     User getByEmail(String email);
+
+    /**
+     * 查询用户数据
+     *
+     * @param id 用户ID
+     * @return 用户数据
+     */
+    UserVO getVoById(Long id);
 
 }

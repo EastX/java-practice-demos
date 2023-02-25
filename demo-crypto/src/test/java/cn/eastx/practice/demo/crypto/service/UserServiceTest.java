@@ -2,6 +2,7 @@ package cn.eastx.practice.demo.crypto.service;
 
 import cn.eastx.practice.demo.crypto.config.mp.CryptoCondInterceptor;
 import cn.eastx.practice.demo.crypto.pojo.po.User;
+import cn.eastx.practice.demo.crypto.pojo.vo.UserVO;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.json.JSONUtil;
@@ -227,6 +228,26 @@ public class UserServiceTest {
         user = userService.getByPhoneEmail(addUser.getPhone(), emailPart);
         log.debug("getByPhoneEmail, user={}", JSONUtil.toJsonStr(user));
         Assert.isTrue(Objects.isNull(user), "不使用拦截器根据手机号、部分邮箱查得到用户");
+    }
+
+    /**
+     * 测试默认字符串类型处理器
+     */
+    @Test
+    public void test_defaultStringTypeHandler() {
+        User dbUser = new User();
+        dbUser.setName("test_insert");
+        dbUser.setSalt(IdUtil.fastSimpleUUID());
+        dbUser.setPassword(SecureUtil.md5("123456" + dbUser.getSalt()));
+        dbUser.setPhone("17300000000");
+        dbUser.setEmail("test_insert@test.com");
+        Assert.isTrue(userService.save(dbUser), "单个新增失败");
+        log.debug("inserted id={}", dbUser.getId());
+
+        UserVO userVO = userService.getVoById(dbUser.getId());
+        log.debug("userVO={}", userVO);
+        Assert.isTrue(Objects.equals(dbUser.getPhone(), userVO.getPhone()), "手机号不生效");
+        Assert.isTrue(Objects.equals(dbUser.getEmail(), userVO.getEmail()), "邮箱不生效");
     }
 
 }

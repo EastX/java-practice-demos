@@ -50,4 +50,12 @@
         LIMIT 1
     </select>
 
+    <select id="getVoById"
+            resultType="cn.eastx.practice.demo.crypto.pojo.vo.UserVO">
+        SELECT <include refid="All_Columns"></include>
+        FROM crypto_user
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
 </mapper>

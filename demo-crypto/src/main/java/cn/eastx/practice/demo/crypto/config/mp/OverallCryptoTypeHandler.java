@@ -1,12 +1,9 @@
 package cn.eastx.practice.demo.crypto.config.mp;
 
 import cn.eastx.practice.demo.crypto.util.CryptoDataUtil;
-import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 
-import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -24,7 +21,7 @@ import java.sql.SQLException;
  * @author EastX
  * @date 2022/11/11
  */
-public class OverallCryptoTypeHandler extends BaseTypeHandler<String> {
+public class OverallCryptoTypeHandler extends DefaultStringTypeHandler {
 
     @Override
     public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
@@ -34,24 +31,6 @@ public class OverallCryptoTypeHandler extends BaseTypeHandler<String> {
             因为拦截器修改元数据将导致实体类属性值产生变更，所以实体类还是由 TypeHandler 来进行处理
          */
         ps.setString(i, CryptoCond.EncryptionEnum.OVERALL.getCryptoUseVal(parameter));
-    }
-
-    @Override
-    public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
-        // 对可为null的结果进行解密
-        return CryptoDataUtil.decrypt(rs.getString(columnName));
-    }
-
-    @Override
-    public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
-        // 对可为null的结果进行解密
-        return CryptoDataUtil.decrypt(rs.getString(columnIndex));
-    }
-
-    @Override
-    public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
-        // 对可为null的结果进行解密
-        return CryptoDataUtil.decrypt(cs.getString(columnIndex));
     }
 
 }

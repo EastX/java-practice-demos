@@ -1,6 +1,7 @@
 package cn.eastx.practice.demo.crypto.dao;
 
 import cn.eastx.practice.demo.crypto.pojo.po.User;
+import cn.eastx.practice.demo.crypto.pojo.vo.UserVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.ResultMap;
@@ -53,6 +54,14 @@ public interface UserMapper extends BaseMapper<User> {
     @Select("SELECT id, name, password, salt, phone, email, create_time, update_time FROM crypto_user WHERE email LIKE CONCAT('%', #{email}, '%') LIMIT 1")
     @ResultMap("BaseResultMap")
     User getByEmail(@Param("email") String email);
+
+    /**
+     * 查询用户数据
+     *
+     * @param id 用户ID
+     * @return 用户数据
+     */
+    UserVO getVoById(@Param("id") long id);
 
 }
 
