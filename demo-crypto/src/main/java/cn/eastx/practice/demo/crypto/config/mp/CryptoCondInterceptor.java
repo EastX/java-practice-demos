@@ -1,11 +1,13 @@
 package cn.eastx.practice.demo.crypto.config.mp;
 
 import cn.eastx.practice.demo.crypto.util.SqlUtil;
-import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Pair;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +38,7 @@ import java.util.stream.Stream;
  *  注意：模糊查询条件需要 中文（非asscii字符）大于等于两个字符，英文（assii字符）大于等于4个字符
  *
  * @see CryptoCond 加密条件注解
- * @see intercept 线程私有变量设置是否拦截
+ * @see INTERCEPT 线程私有变量设置是否拦截
  *
  * @author EastX
  * @date 2022/11/11
@@ -47,7 +49,7 @@ import java.util.stream.Stream;
 public class CryptoCondInterceptor implements Interceptor {
 
     /** 加密拦截器执行拦截线程本地变量 */
-    private static ThreadLocal<Boolean> intercept = ThreadLocal.withInitial(() -> true);
+    private static ThreadLocal<Boolean> INTERCEPT = ThreadLocal.withInitial(() -> true);
 
     /**
      * 设置加密拦截器是否处理拦截（默认处理拦截）
@@ -56,7 +58,7 @@ public class CryptoCondInterceptor implements Interceptor {
      * @see CryptoCondInterceptor#getIntercept()
      */
     public static void setIntercept(boolean intercept) {
-        CryptoCondInterceptor.intercept.set(intercept);
+        CryptoCondInterceptor.INTERCEPT.set(intercept);
     }
 
     /**
@@ -66,14 +68,14 @@ public class CryptoCondInterceptor implements Interceptor {
      * @see CryptoCondInterceptor#setIntercept(boolean)
      */
     public static boolean getIntercept() {
-        return Boolean.TRUE.equals(intercept.get());
+        return Boolean.TRUE.equals(INTERCEPT.get());
     }
 
     /**
      * 清除加密拦截器是否处理拦截（默认处理拦截）
      */
     public static void clearIntercept() {
-        intercept.remove();
+        INTERCEPT.remove();
     }
 
     @Override
@@ -83,15 +85,15 @@ public class CryptoCondInterceptor implements Interceptor {
         MappedStatement mappedStatement =
                 (MappedStatement) metaObject.getValue("delegate.mappedStatement");
         // 支持处理 SELECT、UPDATE、DELETE
-        boolean canHandler = Stream.of(SqlCommandType.SELECT, SqlCommandType.UPDATE,
-                        SqlCommandType.DELETE)
-                .anyMatch(item -> item.equals(mappedStatement.getSqlCommandType()));
-        if (canHandler && !getIntercept()) {
-            clearIntercept();
+        boolean canHandle =
+                Stream.of(SqlCommandType.SELECT, SqlCommandType.UPDATE, SqlCommandType.DELETE)
+                        .noneMatch(item -> item.equals(mappedStatement.getSqlCommandType()))
+                || !getIntercept();
+        clearIntercept();
+        if (canHandle) {
             return invocation.proceed();
         }
 
-        clearIntercept();
         // 判断是否有参数需要处理
         BoundSql boundSql = statementHandler.getBoundSql();
         if (Objects.isNull(boundSql.getParameterObject())) {
@@ -100,7 +102,7 @@ public class CryptoCondInterceptor implements Interceptor {
 
         // 获取自定义注解，通过 MapperID 获取到 Mapper 对应的实体类，获取实体类所有注解字段与注解对应 Map
         Map<String, CryptoCond> condMap = mapEntityFieldCond(mappedStatement.getId());
-        if (CollectionUtil.isNotEmpty(condMap)) {
+        if (MapUtil.isNotEmpty(condMap)) {
             replaceHandle(mappedStatement.getConfiguration(), condMap, boundSql);
         }
 
@@ -120,13 +122,13 @@ public class CryptoCondInterceptor implements Interceptor {
         String sql = boundSql.getSql();
         Pair<String, List<SqlCondOperation>> sqlPair = SqlUtil.getSqlCondOperationPair(sql);
         List<SqlCondOperation> operationList = sqlPair.getValue();
-        if (CollectionUtil.isEmpty(operationList)) {
+        if (CollUtil.isEmpty(operationList)) {
             return;
         }
 
         sql = sqlPair.getKey();
         MetaObject paramMetaObject = configuration.newMetaObject(boundSql.getParameterObject());
-        List<ParameterMapping> mappings = boundSql.getParameterMappings();
+        List<ParameterMapping> mappingList = boundSql.getParameterMappings();
 
         int mappingStartIdx = 0;
         int addIdxLen = 0;
@@ -135,29 +137,13 @@ public class CryptoCondInterceptor implements Interceptor {
             int prepareNum = SqlUtil.countPreparePlaceholder(condStr);
             CryptoCond ann = condMap.get(operation.getColumnName());
             if (Objects.nonNull(ann)) {
-                // 替换查询条件参数中的列名
-                if (StrUtil.isNotBlank(ann.replacedColumn()) && !operation.checkSetCond()) {
-                    sql = operation.replaceSqlCond(sql, addIdxLen,
-                            operation.getColumnName(), ann.replacedColumn());
-                }
+                sql = replaceColumnNameHandle(sql, addIdxLen, operation, ann);
 
-                // 替换属性值为加密值
-                if (prepareNum == 0) {
-                    // 存在非预编译语句条件，直接替换 SQL 条件值
-                    String propVal =
-                            String.valueOf(paramMetaObject.getValue(operation.getColumnName()));
-                    String useVal = getCryptoUseVal(ann, propVal);
-                    sql = operation.replaceSqlCond(sql, addIdxLen, propVal, useVal);
+                if (prepareNum > 0) {
+                    prepareHandle(mappingList, mappingStartIdx, prepareNum, ann);
                 } else {
-                    // 预编译语句条件通过替换条件值处理
-                    for (int i = 0; i < prepareNum; i++) {
-                        String propName = mappings.get(mappingStartIdx + i).getProperty();
-                        if (!propName.startsWith("et.")) {
-                            // 非实体类属性进行值替换，实体类属性通过 TypeHandler 处理
-                            String propVal = String.valueOf(paramMetaObject.getValue(propName));
-                            paramMetaObject.setValue(propName, getCryptoUseVal(ann, propVal));
-                        }
-                    }
+                    // 非编译参数，替换属性值为加密值
+                    sql = notPrepareHandle(sql, paramMetaObject, addIdxLen, operation, ann);
                 }
             }
 
@@ -169,20 +155,59 @@ public class CryptoCondInterceptor implements Interceptor {
     }
 
     /**
-     * 获取属性值加密后对应的使用值
+     * 编译条件值处理
      *
-     * @param ann 加密条件注解
-     * @param propertyVal 属性值
-     * @return 属性值加密后对应的使用值
+     * @param mappingList 映射列表
+     * @param mappingListStartIdx 映射列表起始索引
+     * @param prepareNum 编译值数量
+     * @param ann 加密注解
      */
-    private String getCryptoUseVal(CryptoCond ann, String propertyVal) {
-        String actualVal = SqlUtil.val2Normal(propertyVal);
-        String useVal = propertyVal.replace(actualVal, ann.encryption().encrypt(actualVal));
-        if (Objects.equals(propertyVal, actualVal)) {
-            return useVal;
+    private void prepareHandle(List<ParameterMapping> mappingList, int mappingListStartIdx,
+                               int prepareNum, CryptoCond ann) {
+        // 预编译语句条件通过替换类型处理器处理
+        for (int i = 0; i < prepareNum; i++) {
+            ParameterMapping mapping = mappingList.get(mappingListStartIdx + i);
+            ReflectUtil.setFieldValue(mapping, "typeHandler", ann.encryption().getTypeHandler());
+        }
+    }
+
+    /**
+     * 非预编译条件值处理
+     *
+     * @param sql SQL 字符串
+     * @param paramMetaObject
+     * @param addIdxLen 增加索引位置
+     * @param operation 操作对象
+     * @param ann 加密注解
+     * @return 处理后的 SQL 语句字符串
+     */
+    private String notPrepareHandle(String sql, MetaObject paramMetaObject, int addIdxLen,
+                                    SqlCondOperation operation, CryptoCond ann) {
+        // 存在非预编译语句条件，直接替换 SQL 条件值
+        String propVal =
+                String.valueOf(paramMetaObject.getValue(operation.getColumnName()));
+        String useVal = ann.encryption().getCryptoUseVal(propVal);
+        return operation.replaceSqlCond(sql, addIdxLen, propVal, useVal);
+    }
+
+    /**
+     * 替换 SQL 条件列名处理
+     * 
+     * @param sql SQL 字符串
+     * @param addIdxLen 增加索引位置
+     * @param operation 操作对象
+     * @param ann 加密注解
+     * @return 替换后的 SQL
+     */
+    private String replaceColumnNameHandle(String sql, int addIdxLen, SqlCondOperation operation, 
+                                           CryptoCond ann) {
+        boolean cantHandle = StrUtil.isBlank(ann.replacedColumn()) || operation.checkSetCond();
+        if (cantHandle) {
+            return sql;
         }
 
-        return propertyVal.replace(actualVal, ann.encryption().encrypt(actualVal));
+        // 替换查询条件参数中的列名
+        return operation.replaceSqlCond(sql, addIdxLen, operation.getColumnName(), ann.replacedColumn());
     }
 
     /**
@@ -201,10 +226,15 @@ public class CryptoCondInterceptor implements Interceptor {
             }
 
             ParameterizedType pt = (ParameterizedType) type;
-            if ("com.baomidou.mybatisplus.core.mapper.BaseMapper".equals(pt.getRawType().getTypeName())) {
-                Class entityClazz = (Class) pt.getActualTypeArguments()[0];
-                return mapFieldAnnotation(entityClazz, CryptoCond.class);
+            String typeName = pt.getRawType().getTypeName();
+            if (!"com.baomidou.mybatisplus.core.mapper.BaseMapper".equals(typeName)) {
+                if (!BaseMapper.class.isAssignableFrom(Class.forName(typeName))) {
+                    continue;
+                }
             }
+
+            Class entityClazz = (Class) pt.getActualTypeArguments()[0];
+            return mapFieldAnnotation(entityClazz, CryptoCond.class);
         }
 
         return Collections.emptyMap();

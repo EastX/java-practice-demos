@@ -1,13 +1,16 @@
 package cn.eastx.practice.demo.crypto.config.mp;
 
 import cn.eastx.practice.demo.crypto.util.CryptoDataUtil;
+import cn.eastx.practice.demo.crypto.util.SqlUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.apache.ibatis.type.TypeHandler;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Objects;
 
 /**
  * 加密条件注解
@@ -32,7 +35,7 @@ public @interface CryptoCond {
      * 加密方式
      *  对 SQL 中的条件值、参数值进行加密处理
      */
-    EncryptionEnum encryption() default EncryptionEnum.DEFAULT_OVERALL;
+    EncryptionEnum encryption() default EncryptionEnum.OVERALL;
 
     /**
      * 加密方式枚举
@@ -41,20 +44,22 @@ public @interface CryptoCond {
     @AllArgsConstructor
     enum EncryptionEnum {
         /** 整体加密 */
-        DEFAULT_OVERALL {
+        OVERALL(new OverallCryptoTypeHandler()) {
             @Override
             public String encrypt(String data) {
                 return CryptoDataUtil.overallEncrypt(data);
             }
         },
         /** 模糊加密 */
-        DEFAULT_FUZZY {
+        FUZZY(new FuzzyCryptoTypeHandler()) {
             @Override
             public String encrypt(String data) {
                 return CryptoDataUtil.fuzzyEncrypt(data);
             }
         },
         ;
+
+        private TypeHandler typeHandler;
 
         /**
          * 加密数据
@@ -63,6 +68,23 @@ public @interface CryptoCond {
          * @return 数据密文
          */
         public abstract String encrypt(String data);
+
+        /**
+         * 获取属性值加密后对应的使用值
+         *
+         * @param beforeVal 属性值
+         * @return 属性值加密后对应的使用值
+         */
+        public String getCryptoUseVal(String beforeVal) {
+            String actualVal = SqlUtil.val2Normal(beforeVal);
+            String encryptVal = this.encrypt(actualVal);
+            if (Objects.equals(beforeVal, actualVal)) {
+                return encryptVal;
+            }
+
+            return beforeVal.replace(actualVal, encryptVal);
+        }
+
     }
 
 }

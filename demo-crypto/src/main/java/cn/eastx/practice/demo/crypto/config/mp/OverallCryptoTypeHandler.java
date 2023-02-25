@@ -33,7 +33,7 @@ public class OverallCryptoTypeHandler extends BaseTypeHandler<String> {
             当前处理 INSERT ENTITY，UPDATE ENTITY 会先通过拦截器处理
             因为拦截器修改元数据将导致实体类属性值产生变更，所以实体类还是由 TypeHandler 来进行处理
          */
-        ps.setString(i, CryptoDataUtil.overallEncrypt(parameter));
+        ps.setString(i, CryptoCond.EncryptionEnum.OVERALL.getCryptoUseVal(parameter));
     }
 
     @Override

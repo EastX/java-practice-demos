@@ -4,6 +4,7 @@ import cn.eastx.practice.demo.crypto.config.mp.SqlCondOperation;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.lang.Pair;
+import cn.hutool.core.util.StrUtil;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
@@ -40,10 +41,15 @@ public class SqlUtil {
     public static Pattern COND_COLUMN_PATTERN =
             Pattern.compile("([\\s]*)([\\w]+)([\\s]*)", Pattern.CASE_INSENSITIVE);
     /**
+     * SQL 条件中表别名正则
+     */
+    public static Pattern COND_ALIAS_PATTERN =
+            Pattern.compile("([\\s]*)([\\w]+)([\\s]*)([.])", Pattern.CASE_INSENSITIVE);
+    /**
      * SQL 条件 UPDATE SET 字符串正则
      */
     public static Pattern COND_UPDATE_SET_PATTERN =
-            Pattern.compile("([\\s]+)(set)([\\s]+)", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("([\\s]+)(set)((\\s|.)+)(where|limit)([\\s]+)", Pattern.CASE_INSENSITIVE);
 
     private SqlUtil() {}
 
@@ -73,7 +79,7 @@ public class SqlUtil {
 
             return Pair.of(formatSql, operationList);
         } catch (JSQLParserException e) {
-            log.error("[listSqlCondOperation]exception={}", ExceptionUtil.stacktraceToString(e));
+            log.error("[getSqlCondOperationPair]exception={}", ExceptionUtil.stacktraceToString(e));
         }
 
         return Pair.of(sql, Collections.emptyList());
@@ -110,13 +116,12 @@ public class SqlUtil {
         Matcher setMatcher = COND_UPDATE_SET_PATTERN.matcher(sql);
         setMatcher.find();
         int multiCondStart = setMatcher.start();
-        // 与 Update.toString() 一致获取 SET ...2
-        StringBuilder setStrSb = new StringBuilder();
-        UpdateSet.appendUpdateSetsTo(setStrSb, update.getUpdateSets());
-        setMatcher = COND_UPDATE_SET_PATTERN.matcher(setStrSb.toString());
+        setMatcher = COND_UPDATE_SET_PATTERN.matcher(getUpdateSet(update));
         String multiCondStr = setMatcher.replaceAll("");
-        setMatcher.reset().find();
-        multiCondStart += setMatcher.end();
+        setMatcher.reset();
+        if (setMatcher.find()) {
+            multiCondStart += setMatcher.end();
+        }
 
         List<SqlCondOperation> resultList = new ArrayList<>();
         resultList.addAll(condStr2SqlCondOperationList(
@@ -125,6 +130,60 @@ public class SqlUtil {
                 Arrays.asList(Pair.of(update.getWhere(), SqlCondOperation.CondTypeEnum.WHERE));
         resultList.addAll(expressions2SqlCondOperationList(sql, multiCondPairList));
         return resultList;
+    }
+
+    /**
+     * 获取 UPDATE 语句中 SET 子句
+     *
+     * @param update UPDATE 语句对象
+     * @return SET 子句字符串
+     */
+    private static String getUpdateSet(Update update) {
+        StringBuilder setStrSb = new StringBuilder();
+        // 与 Update.toString() 一致获取 SET ...
+        int j = 0;
+        for (UpdateSet updateSet : update.getUpdateSets()) {
+            if (j > 0) {
+                setStrSb.append(", ");
+            }
+
+            if (updateSet.isUsingBracketsForColumns()) {
+                setStrSb.append("(");
+            }
+
+            for (int i = 0; i < updateSet.getColumns().size(); i++) {
+                if (i > 0) {
+                    setStrSb.append(", ");
+                }
+                setStrSb.append(updateSet.getColumns().get(i));
+            }
+
+            if (updateSet.isUsingBracketsForColumns()) {
+                setStrSb.append(")");
+            }
+
+            setStrSb.append(" = ");
+
+            if (updateSet.isUsingBracketsForValues()) {
+                setStrSb.append("(");
+            }
+
+            for (int i = 0; i < updateSet.getExpressions().size(); i++) {
+                if (i > 0) {
+                    setStrSb.append(", ");
+                }
+                setStrSb.append(updateSet.getExpressions().get(i));
+            }
+            if (updateSet.isUsingBracketsForValues()) {
+                setStrSb.append(")");
+            }
+
+            j++;
+        }
+
+        // JSqlParser 4.5 版本
+//        UpdateSet.appendUpdateSetsTo(setStrSb, update.getUpdateSets());
+        return setStrSb.toString();
     }
 
     /**
@@ -200,7 +259,9 @@ public class SqlUtil {
                 singleCondStart = multiCondStrLen;
             }
 
-            Matcher condMatcher = COND_COLUMN_PATTERN.matcher(singleCondStr);
+            Matcher condMatcher =
+                    COND_COLUMN_PATTERN.matcher(
+                            COND_ALIAS_PATTERN.matcher(singleCondStr).replaceAll(""));
             if (condMatcher.find()) {
                 SqlCondOperation operation = SqlCondOperation.builder()
                         .columnName(condMatcher.group().trim())
@@ -244,6 +305,10 @@ public class SqlUtil {
      * @return 正常值
      */
     public static String val2Normal(String val) {
+        if (StrUtil.isBlank(val)) {
+            return val;
+        }
+
         Set<String> placeholders = Sets.newHashSet("%", "_");
         boolean needSub = false;
         int startIdx = 0;

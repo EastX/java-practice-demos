@@ -48,14 +48,14 @@ public class User {
      * 手机号码，整体加密
      */
     @TableField(typeHandler = OverallCryptoTypeHandler.class)
-    @CryptoCond(encryption = CryptoCond.EncryptionEnum.DEFAULT_OVERALL)
+    @CryptoCond(encryption = CryptoCond.EncryptionEnum.OVERALL)
     private String phone;
 
     /**
      * 邮箱，模糊加密
      */
     @TableField(typeHandler = FuzzyCryptoTypeHandler.class)
-    @CryptoCond(encryption = CryptoCond.EncryptionEnum.DEFAULT_FUZZY)
+    @CryptoCond(encryption = CryptoCond.EncryptionEnum.FUZZY)
     private String email;
 
     /**

@@ -24,7 +24,6 @@
         <mysql.version>8.0.31</mysql.version>
         <mybatis.plus.version>3.5.2</mybatis.plus.version>
         <guava.version>31.1-jre</guava.version>
-        <jsqlparser.version>4.5</jsqlparser.version>
     </properties>
 
     <dependencies>
@@ -56,11 +55,6 @@
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
             <version>${mybatis.plus.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.jsqlparser</groupId>
-            <artifactId>jsqlparser</artifactId>
-            <version>${jsqlparser.version}</version>
         </dependency>
 
         <!-- util -->
