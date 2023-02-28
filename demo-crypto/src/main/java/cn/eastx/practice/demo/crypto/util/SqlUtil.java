@@ -1,6 +1,7 @@
 package cn.eastx.practice.demo.crypto.util;
 
 import cn.eastx.practice.demo.crypto.config.mp.SqlCondOperation;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.lang.Pair;
@@ -10,10 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.delete.Delete;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.update.UpdateSet;
 
@@ -324,6 +325,83 @@ public class SqlUtil {
         }
 
         return needSub ? val.substring(startIdx, endIdx) : val;
+    }
+
+    /**
+     * 获取 SQL 中表名集合
+     *
+     * @param sql SQL 语句
+     * @return 表名集合
+     */
+    public static Set<String> listSqlTableName(String sql) {
+        try {
+            Statement statement = CCJSqlParserUtil.parse(sql);
+            if (statement instanceof Select) {
+                SelectBody selectBody = ((Select) statement).getSelectBody();
+                if (selectBody instanceof PlainSelect) {
+                    PlainSelect plain = (PlainSelect) selectBody;
+                    return listSqlTableName(((Table) plain.getFromItem()), plain.getJoins());
+                } else if (selectBody instanceof SetOperationList) {
+                    SetOperationList operationList = (SetOperationList) selectBody;
+                    Set<String> tableNames = new HashSet<>();
+                    for (SelectBody tmpBody : operationList.getSelects()) {
+                        PlainSelect plain = (PlainSelect) tmpBody;
+                        tableNames.addAll(listSqlTableName(((Table) plain.getFromItem()), plain.getJoins()));
+                    }
+
+                    return tableNames;
+                }
+
+            } else if (statement instanceof Update) {
+                Update update = (Update) statement;
+                return listSqlTableName(update.getTable(), update.getStartJoins());
+            } else if (statement instanceof Delete) {
+                Delete delete = (Delete) statement;
+                return listSqlTableName(delete.getTable(), delete.getJoins());
+            }
+
+        } catch (JSQLParserException e) {
+            log.error("[listSqlTableName] sql={}, e={}", sql, ExceptionUtil.stacktraceToString(e));
+        }
+
+        return Sets.newHashSet();
+    }
+
+    /**
+     * 获取 SQL 中表名集合
+     *
+     * @param table 表数据
+     * @param joins 连表数据
+     * @return 表名集合
+     */
+    private static Set<String> listSqlTableName(Table table, List<Join> joins) {
+        Set<String> tbs = Sets.newHashSetWithExpectedSize(1);
+        tbs.add(getTableName(table));
+        if (CollUtil.isEmpty(joins)) {
+            return tbs;
+        }
+
+        for (Join join : joins) {
+            tbs.add(getTableName((Table) join.getRightItem()));
+        }
+
+        return tbs;
+    }
+
+    /**
+     * 获取表名（完整表名可能为 库名.表名 ）
+     *
+     * @param table 表
+     * @return 表名
+     */
+    private static String getTableName(Table table) {
+        String tableName = table.getFullyQualifiedName();
+        int pIdx = tableName.lastIndexOf(".");
+        if (pIdx > -1) {
+            return tableName.substring(pIdx + 1);
+        }
+
+        return tableName;
     }
 
 }

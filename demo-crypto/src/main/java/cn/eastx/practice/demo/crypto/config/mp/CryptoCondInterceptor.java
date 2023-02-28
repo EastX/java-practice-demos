@@ -2,12 +2,13 @@ package cn.eastx.practice.demo.crypto.config.mp;
 
 import cn.eastx.practice.demo.crypto.util.SqlUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
@@ -23,11 +24,11 @@ import org.apache.ibatis.plugin.Signature;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
+import javax.annotation.PostConstruct;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.util.*;
 import java.util.stream.Stream;
@@ -101,7 +102,7 @@ public class CryptoCondInterceptor implements Interceptor {
         }
 
         // 获取自定义注解，通过 MapperID 获取到 Mapper 对应的实体类，获取实体类所有注解字段与注解对应 Map
-        Map<String, CryptoCond> condMap = mapEntityFieldCond(mappedStatement.getId());
+        Map<String, CryptoCond> condMap = mapSqlTableCond(boundSql.getSql());
         if (MapUtil.isNotEmpty(condMap)) {
             replaceHandle(mappedStatement.getConfiguration(), condMap, boundSql);
         }
@@ -211,36 +212,6 @@ public class CryptoCondInterceptor implements Interceptor {
     }
 
     /**
-     * 获取实体字段注解集合
-     *
-     * @param mapperId 执行方法唯一ID
-     * @return 实体字段注解集合
-     */
-    private Map<String, CryptoCond> mapEntityFieldCond(String mapperId) throws ClassNotFoundException {
-        Class<?> clazz = Class.forName(mapperId.substring(0, mapperId.lastIndexOf(".")));
-        Type[] typeArr = clazz.getGenericInterfaces();
-
-        for (Type type : typeArr) {
-            if (!(type instanceof ParameterizedType)) {
-                continue;
-            }
-
-            ParameterizedType pt = (ParameterizedType) type;
-            String typeName = pt.getRawType().getTypeName();
-            if (!"com.baomidou.mybatisplus.core.mapper.BaseMapper".equals(typeName)) {
-                if (!BaseMapper.class.isAssignableFrom(Class.forName(typeName))) {
-                    continue;
-                }
-            }
-
-            Class entityClazz = (Class) pt.getActualTypeArguments()[0];
-            return mapFieldAnnotation(entityClazz, CryptoCond.class);
-        }
-
-        return Collections.emptyMap();
-    }
-
-    /**
      * 获取字段名 与 注解 对应Map
      *  注意：字段名默认为下划线形式，如果通过 {@link TableField} 指定了数据库字段则使用数据库字段
      *
@@ -270,6 +241,47 @@ public class CryptoCondInterceptor implements Interceptor {
         }
 
         return resultMap;
+    }
+
+    @Value("${crypto.entity:}")
+    private List<String> entityNames;
+
+    private static final Map<String, Map<String, CryptoCond>> TABLE_ANN_MAP = new HashMap<>();
+
+    @PostConstruct
+    public void initEntityName() {
+        if (CollUtil.isEmpty(entityNames)) {
+            return;
+        }
+
+        try {
+            for (String entityName : entityNames) {
+                Class entityClazz = Class.forName(entityName);
+                TableName tn = (TableName) entityClazz.getDeclaredAnnotation(TableName.class);
+                TABLE_ANN_MAP.put(tn.value(), mapFieldAnnotation(entityClazz, CryptoCond.class));
+            }
+        } catch (ClassNotFoundException e) {
+            log.error("CryptoCondInterceptor initEntityName fail, entityNames={}, e={}",
+                    entityNames, ExceptionUtil.stacktraceToString(e));
+        }
+    }
+
+    /**
+     * 获取表注解集合
+     *
+     * @param sql SQL脚本
+     * @return 实体字段注解集合
+     */
+    private Map<String, CryptoCond> mapSqlTableCond(String sql) {
+        Set<String> tableNames = SqlUtil.listSqlTableName(sql);
+        tableNames.retainAll(TABLE_ANN_MAP.keySet());
+
+        Map<String, CryptoCond> condMap = new HashMap<>();
+        for (String tableName : tableNames) {
+            condMap.putAll(TABLE_ANN_MAP.get(tableName));
+        }
+
+        return condMap;
     }
 
 }

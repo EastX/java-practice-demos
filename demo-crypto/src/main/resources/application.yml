@@ -52,3 +52,5 @@ mybatis-plus:
     default-executor-type: REUSE
     use-actual-param-name: true
 
+crypto:
+  entity: cn.eastx.practice.demo.crypto.pojo.po.User
