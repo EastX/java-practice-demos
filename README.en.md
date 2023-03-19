@@ -25,6 +25,8 @@
 | [demo-ratelimit](./demo-ratelimit) | Rate limit practices<br>Features: rate limit annotation component (based on Spring Interceptor) |
 | [demo-crypto](./demo-crypto) | Data crypto practice<br>Features: crypto tools、database privacy field crypto annotation component (based on MyBatis Interceptor, TypeHandler) |
 | [demo-lock](./demo-lock) | Lock practice<br>Features: distributed lock tool |
+| [boot-starter](./boot-starter) | SpringBoot starter practice<br>Features: Encapsulate other modules as starters for use by other SpringBoot projects. |
+| [boot-starter-test](./boot-starter-test) | boot-starter test |
 
 ### Tools
 | Name | Download Address |
