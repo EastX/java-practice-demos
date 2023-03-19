@@ -25,7 +25,6 @@
         <commons.version>3.12.0</commons.version>
         <jackson.version>2.13.3</jackson.version>
         <caffeine.version>2.9.3</caffeine.version>
-        <junit.version>4.12</junit.version>
     </properties>
 
     <dependencies>
@@ -35,12 +34,12 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
+            <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
         <!-- util -->

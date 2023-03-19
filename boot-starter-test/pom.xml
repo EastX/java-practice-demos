@@ -28,7 +28,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- cache -->
         <dependency>
             <groupId>cn.eastx.practice</groupId>
             <artifactId>boot-starter</artifactId>

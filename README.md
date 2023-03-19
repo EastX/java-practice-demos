@@ -25,6 +25,8 @@
 | [demo-ratelimit](./demo-ratelimit) | 限流实践<br>功能：限流注解组件（基于 Spring 拦截器） |
 | [demo-crypto](./demo-crypto) | 数据加密实践<br>功能：加密工具、数据库隐私字段加密注解组件（基于 MyBatis 拦截器、TypeHandler） |
 | [demo-lock](./demo-lock) | 锁实践<br>功能：自定义分布式锁工具 |
+| [boot-starter](./boot-starter) | SpringBoot starter 实践<br>功能：封装其他模块为 starter ，提供给其他 SpringBoot 项目使用 |
+| [boot-starter-test](./boot-starter-test) | 锁实践<br>功能：自定义分布式锁工具 |
 
 ### 工具
 | 名称 | 下载地址 |

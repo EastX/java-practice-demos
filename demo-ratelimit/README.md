@@ -8,8 +8,8 @@
     <a href="https://www.oracle.com/java/technologies/downloads/archive/">
         <img alt="JDK" src="https://img.shields.io/badge/JDK-1.8.0_201-e67621.svg"/>
     </a>
-    <a href="https://docs.spring.io/spring-boot/docs/2.7.2/reference/html/">
-        <img alt="Spring Boot" src="https://img.shields.io/badge/Spring Boot-2.7.2-6db33f.svg"/>
+    <a href="https://docs.spring.io/spring-boot/docs/2.7.9/reference/html/">
+        <img alt="Spring Boot" src="https://img.shields.io/badge/Spring Boot-2.7.9-6db33f.svg"/>
     </a>
     <a href="https://redis.io/">
         <img alt="Redis" src="https://img.shields.io/badge/Redis-6.0 lettuce-dc382c.svg"/>
