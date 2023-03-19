@@ -14,6 +14,8 @@
         <module>demo-ratelimit</module>
         <module>demo-crypto</module>
         <module>demo-lock</module>
+        <module>boot-starter</module>
+        <module>boot-starter-test</module>
     </modules>
 
     <properties>

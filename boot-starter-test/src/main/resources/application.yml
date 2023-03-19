@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    password: root
+    lettuce:
+      pool:
+        min-idle: 0
+        max-active: 8
+        max-idle: 8
+        max-wait: -1ms
+    connect-timeout: 30000ms
+
+# 支持打印 debug 日志
+logging:
+  level:
+    cn.eastx.practice.middleware: debug
+
+practice:
+  middleware:
+    spelContexts:
+      - name: _RAND
+        value-class: org.apache.commons.lang3.RandomUtils
+        value-method: nextLong
+    cache:
+      local-cache:
+        maximum-size: 1000
+        expire-after-write: 10

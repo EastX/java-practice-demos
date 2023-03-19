@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  cn.eastx.practice.middleware.config.MiddlewareAutoConfiguration,\
+  cn.eastx.practice.middleware.config.CacheAutoConfiguration
