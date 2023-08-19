@@ -55,6 +55,27 @@
             <artifactId>caffeine</artifactId>
             <version>${caffeine.version}</version>
         </dependency>
+        <!-- memcache -->
+        <!-- FolsomMemcachedUtil -->
+        <dependency>
+            <groupId>com.spotify</groupId>
+            <artifactId>folsom</artifactId>
+            <version>${folsom.version}</version>
+        </dependency>
+        <!-- XMemcachedUtil -->
+        <dependency>
+            <groupId>com.googlecode.xmemcached</groupId>
+            <artifactId>xmemcached</artifactId>
+            <version>${xmemcached.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- SpyMemcachedUtil -->
+        <dependency>
+            <groupId>net.spy</groupId>
+            <artifactId>spymemcached</artifactId>
+            <version>${spymemcached.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

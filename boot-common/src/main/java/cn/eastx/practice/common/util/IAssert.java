@@ -25,8 +25,17 @@ public interface IAssert {
      * @param object  断言
      * @param msgArgs 断言成立消息参数
      */
-    default void assetNotNull(Object object, Object... msgArgs) {
-        if (null == object) {
+    default void assertNotNull(Object object, Object... msgArgs) {
+        assertTrue(null != object);
+    }
+
+    /**
+     * 断言为真
+     *
+     * @param flag 标识
+     */
+    default void assertTrue(Boolean flag, Object... msgArgs) {
+        if (!Boolean.TRUE.equals(flag)) {
             throw newException(msgArgs);
         }
     }

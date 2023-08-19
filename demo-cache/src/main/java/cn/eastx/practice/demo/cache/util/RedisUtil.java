@@ -43,7 +43,7 @@ public class RedisUtil {
      * 获取 默认 RedisTemplate
      */
     public static RedisTemplate<String, Object> defTemplate() {
-        ResponseEnum.SERVER_ERROR.assetNotNull(redisTemplate, "[RedisUtil]未初始化 redisTemplate");
+        ResponseEnum.SERVER_ERROR.assertNotNull(redisTemplate, "[RedisUtil]未初始化 redisTemplate");
         return redisTemplate;
     }
 
@@ -51,7 +51,7 @@ public class RedisUtil {
      * 获取 StringRedisTemplate
      */
     public static StringRedisTemplate strTemplate() {
-        ResponseEnum.SERVER_ERROR.assetNotNull(strRedisTemplate, "[RedisUtil]未初始化 strRedisTemplate");
+        ResponseEnum.SERVER_ERROR.assertNotNull(strRedisTemplate, "[RedisUtil]未初始化 strRedisTemplate");
         return strRedisTemplate;
     }
 

@@ -33,6 +33,10 @@
         <hutool.version>5.8.8</hutool.version>
         <guava.version>31.1-jre</guava.version>
         <transmittable-thread-local.version>2.14.2</transmittable-thread-local.version>
+
+        <folsom.version>1.15.1</folsom.version>
+        <xmemcached.version>2.4.7</xmemcached.version>
+        <spymemcached.version>2.12.3</spymemcached.version>
     </properties>
 
     <dependencyManagement>
