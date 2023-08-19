@@ -1,8 +1,8 @@
 package cn.eastx.practice.demo.cache.controller;
 
+import cn.eastx.practice.common.response.ResponseResult;
 import cn.eastx.practice.demo.cache.config.custom.MethodCacheable;
 import cn.eastx.practice.demo.cache.constants.AspectKeyTypeEnum;
-import cn.eastx.practice.demo.cache.pojo.ResponseResult;
 import cn.hutool.core.util.RandomUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;

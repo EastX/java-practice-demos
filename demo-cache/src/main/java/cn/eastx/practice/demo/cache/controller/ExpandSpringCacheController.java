@@ -1,8 +1,8 @@
 package cn.eastx.practice.demo.cache.controller;
 
+import cn.eastx.practice.common.response.ResponseResult;
 import cn.eastx.practice.demo.cache.config.spring.ExpandCacheable;
 import cn.eastx.practice.demo.cache.config.spring.ExpandRedisConfig;
-import cn.eastx.practice.demo.cache.pojo.ResponseResult;
 import cn.hutool.core.util.RandomUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;

@@ -1,10 +1,4 @@
-package cn.eastx.practice.demo.cache.pojo;
-
-import cn.eastx.practice.demo.cache.constants.ResponseEnum;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+package cn.eastx.practice.common.response;
 
 import java.io.Serializable;
 
@@ -12,33 +6,21 @@ import java.io.Serializable;
  * 统一返回对象
  *
  * @author EastX
- * @date 2022/10/20
+ * @date 2023/08/19
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class ResponseResult<T> {
-
-    /**
-     * response code, 200 -> OK.
-     */
-    private String code;
-
-    /**
-     * response message.
-     */
-    private String message;
+public class ResponseResult<T>  extends BaseResult {
 
     /**
      * response data.
      */
     private T data;
 
-    /**
-     * response timestamp.
-     */
-    private Long timestamp;
+    public ResponseResult() {}
+
+    public ResponseResult(String code, String message, T data) {
+        super(code, message);
+        this.data = data;
+    }
 
     /**
      * response success result wrapper.
@@ -58,12 +40,7 @@ public class ResponseResult<T> {
      * @return response result
      */
     public static <T> ResponseResult<T> success(T data) {
-        return ResponseResult.<T>builder()
-                .code(ResponseEnum.SUCCESS.getCode())
-                .message(ResponseEnum.SUCCESS.getDescription())
-                .timestamp(System.currentTimeMillis())
-                .data(data)
-                .build();
+        return build(ResponseEnum.SUCCESS, data);
     }
 
     /**
@@ -86,12 +63,28 @@ public class ResponseResult<T> {
      * @return response result
      */
     public static <T> ResponseResult<T> fail(String message, T data) {
-        return ResponseResult.<T>builder()
-                .code(ResponseEnum.FAIL.getCode())
-                .message(message)
-                .data(data)
-                .timestamp(System.currentTimeMillis())
-                .build();
+        return build(ResponseEnum.FAIL.getCode(), message, data);
     }
 
+    /**
+     * 通过返回结果接口构建返回对象
+     */
+    public static <T> ResponseResult<T> build(IResult res, T data) {
+        return build(res.getCode(), res.getMessage(), data);
+    }
+
+    /**
+     * 构建返回对象
+     */
+    public static <T> ResponseResult<T> build(String code, String message, T data) {
+        return new ResponseResult(code, message, data);
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
 }

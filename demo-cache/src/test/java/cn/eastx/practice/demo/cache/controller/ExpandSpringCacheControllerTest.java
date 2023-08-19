@@ -1,6 +1,6 @@
 package cn.eastx.practice.demo.cache.controller;
 
-import cn.eastx.practice.demo.cache.constants.ResponseEnum;
+import cn.eastx.practice.common.response.ResponseEnum;
 import cn.eastx.practice.demo.cache.util.LocalCacheUtil;
 import cn.eastx.practice.demo.cache.util.RedisUtil;
 import cn.hutool.json.JSONUtil;
