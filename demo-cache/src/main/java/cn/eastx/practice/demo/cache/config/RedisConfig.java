@@ -1,21 +1,27 @@
 package cn.eastx.practice.demo.cache.config;
 
+import cn.eastx.practice.common.util.GeneralUtil;
 import cn.eastx.practice.common.util.JsonUtil;
+import cn.eastx.practice.demo.cache.util.L2CacheUtil;
 import cn.eastx.practice.demo.cache.util.RedisUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.Collection;
 
 /**
  * Redis 配置
@@ -32,7 +38,7 @@ public class RedisConfig implements BeanPostProcessor {
     /**
      * Redis 模板实例
      */
-    @Bean
+    @Bean("redisTemplate")
     public RedisTemplate<String, Object> redisTemplate() {
         return createRedisTemplate(redisConnectionFactory);
     }
@@ -40,9 +46,43 @@ public class RedisConfig implements BeanPostProcessor {
     /**
      * Redis 模板实例（String）
      */
-    @Bean
+    @Bean("strRedisTemplate")
     public StringRedisTemplate strRedisTemplate() {
         return new StringRedisTemplate(redisConnectionFactory);
+    }
+
+    /**
+     * 二级缓存工具类，由于使用了 Redis Pub/Sub 所以需要被 Spring IOC 管理
+     */
+    @Bean("l2CacheUtil")
+    @DependsOn({"redisTemplate", "strRedisTemplate"})
+    public L2CacheUtil l2CacheUtil() {
+        RedisUtil.initDefTemplate(redisTemplate());
+        RedisUtil.initStrTemplate(strRedisTemplate());
+        return new L2CacheUtil();
+    }
+
+    /**
+     * Redis 发布订阅监听
+     */
+    @Bean
+    public RedisMessageListenerContainer redisMessageListenerContainer() {
+        // 创建一个消息监听对象
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+
+        // 将监听对象放入到容器中
+        container.setConnectionFactory(redisConnectionFactory);
+
+        Collection<RedisSubscriber> subscriberList =
+                SpringUtil.getBeansOfType(RedisSubscriber.class).values();
+        for (RedisSubscriber subscriber : subscriberList) {
+            if (subscriber != null && GeneralUtil.isNotEmpty(subscriber.getTopic())) {
+                // 一个订阅者对应一个主题通道信息
+                container.addMessageListener(subscriber, new PatternTopic(subscriber.getTopic()));
+            }
+        }
+
+        return container;
     }
 
     /**
@@ -83,12 +123,6 @@ public class RedisConfig implements BeanPostProcessor {
             // Json 工具类替换使用 Spring ObjectMapper
             ObjectMapper objectMapper = (ObjectMapper) bean;
             JsonUtil.initSpringOm(objectMapper);
-        }
-        if ("redisTemplate".equals(beanName)) {
-            RedisUtil.initDefTemplate((RedisTemplate<String, Object>) bean);
-        }
-        if ("strRedisTemplate".equals(beanName)) {
-            RedisUtil.initStrTemplate((StringRedisTemplate) bean);
         }
 
         return bean;
