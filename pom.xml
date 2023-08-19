@@ -16,6 +16,7 @@
         <module>demo-lock</module>
         <module>boot-starter</module>
         <module>boot-starter-test</module>
+        <module>boot-common</module>
     </modules>
 
     <properties>
@@ -24,6 +25,34 @@
         <java.version>8</java.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
+
+        <spring-boot.version>2.7.13</spring-boot.version>
+
+        <boot-common.version>1.0-SNAPSHOT</boot-common.version>
+
+        <hutool.version>5.8.8</hutool.version>
+        <guava.version>31.1-jre</guava.version>
+        <transmittable-thread-local.version>2.14.2</transmittable-thread-local.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>cn.eastx.practice</groupId>
+                <artifactId>boot-common</artifactId>
+                <version>${boot-common.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
 
 </project>
