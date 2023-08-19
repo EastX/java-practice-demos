@@ -32,7 +32,7 @@ public class LocalCacheUtil {
      * @see LocalCacheUtil#getCache() DCL获取缓存实例，注意存在时长限制
      */
     @Nullable
-    public static Object getIfPresent(String key) {
+    public static Object get(String key) {
         return Optional.ofNullable(getCache().getIfPresent(key))
                 .map(dataCache -> dataCache.getIfPresent(key))
                 .orElse(null);
@@ -46,7 +46,7 @@ public class LocalCacheUtil {
      * @param duration 缓存时长，单位秒
      * @see LocalCacheUtil#getCache() DCL获取缓存实例，注意存在时长限制
      */
-    public static void put(String key, Object value, long duration) {
+    public static void set(String key, Object value, long duration) {
         Cache<String, Object> dataCache = Caffeine.newBuilder()
                 .maximumSize(1).expireAfterWrite(duration, TimeUnit.SECONDS).build();
         dataCache.put(key, value);
@@ -54,12 +54,12 @@ public class LocalCacheUtil {
     }
 
     /**
-     * 修改缓存失效
+     * 删除缓存
      *
      * @param key 缓存key
      * @see LocalCacheUtil#getCache() DCL获取缓存实例，注意存在时长限制
      */
-    public static void invalidate(String key) {
+    public static void delete(String key) {
         getCache().invalidate(key);
     }
 

@@ -8,7 +8,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -33,9 +32,6 @@ public class MethodCacheAspect {
      *  特殊值包括 null
      */
     private static final Duration SPECIAL_VALUE_DURATION = Duration.ofSeconds(30);
-
-    @Resource
-    private RedisUtil redisUtil;
 
     /**
      * 缓存处理
@@ -79,19 +75,19 @@ public class MethodCacheAspect {
         String key = operation.getKey();
         if (!Boolean.TRUE.equals(operation.getUseLocal())) {
             // 不使用本地缓存
-            return redisUtil.get(key);
+            return RedisUtil.opsValue().get(key);
         }
 
         // 优先从本地缓存获取
-        Object data = LocalCacheUtil.getIfPresent(key);
+        Object data = LocalCacheUtil.get(key);
         if (Objects.nonNull(data)) {
             return data;
         }
 
         // 本地缓存没有从redis缓存获取并设置到本地缓存
-        data = redisUtil.get(key);
+        data = RedisUtil.opsValue().get(key);
         if (Objects.nonNull(data)) {
-            LocalCacheUtil.put(key, data, operation.getLocalDuration());
+            LocalCacheUtil.set(key, data, operation.getLocalDuration());
         }
 
         return data;
@@ -108,14 +104,14 @@ public class MethodCacheAspect {
     private void setDataCache(MethodCacheableOperation operation, Object data) {
         // null缓存处理，固定存储时长，防止缓存穿透
         if (Objects.isNull(data)) {
-            redisUtil.setEx(operation.getKey(), NULL_VALUE, SPECIAL_VALUE_DURATION);
+            RedisUtil.opsValue().set(operation.getKey(), NULL_VALUE, SPECIAL_VALUE_DURATION);
             return;
         }
 
         // 存在实际数据缓存处理
-        redisUtil.setEx(operation.getKey(), data, operation.getDuration());
+        RedisUtil.opsValue().set(operation.getKey(), data, operation.getDuration());
         if (Boolean.TRUE.equals(operation.getUseLocal())) {
-            LocalCacheUtil.put(operation.getKey(), data, operation.getLocalDuration());
+            LocalCacheUtil.set(operation.getKey(), data, operation.getLocalDuration());
         }
     }
 

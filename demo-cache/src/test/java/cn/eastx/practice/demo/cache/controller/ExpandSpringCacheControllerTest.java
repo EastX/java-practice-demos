@@ -34,8 +34,6 @@ public class ExpandSpringCacheControllerTest {
 
     @Resource
     private ExpandSpringCacheController expandCacheController;
-    @Resource
-    private RedisUtil redisUtil;
 
     private MockMvc mockMvc;
 
@@ -66,8 +64,8 @@ public class ExpandSpringCacheControllerTest {
      */
     private void check(String cacheKey, String urlTemplate, String param) throws Exception {
         // 清除缓存
-        redisUtil.delete(cacheKey);
-        LocalCacheUtil.invalidate(cacheKey);
+        RedisUtil.defTemplate().delete(cacheKey);
+        LocalCacheUtil.delete(cacheKey);
 
         // 模拟请求
         RequestBuilder request = MockMvcRequestBuilders.get(urlTemplate)
@@ -92,7 +90,7 @@ public class ExpandSpringCacheControllerTest {
         log.info("mvcResult2={}", res2);
         Assert.isTrue(Objects.equals(res1, res2), "两次请求返回不一致");
 
-        String redisCacheData = JSONUtil.toJsonStr(redisUtil.get(cacheKey));
+        String redisCacheData = JSONUtil.toJsonStr(RedisUtil.opsValue().get(cacheKey));
         log.info("redisCacheData={}", redisCacheData);
     }
 

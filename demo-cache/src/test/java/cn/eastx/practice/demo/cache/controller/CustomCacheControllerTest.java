@@ -36,8 +36,6 @@ public class CustomCacheControllerTest {
 
     @Resource
     private CustomCacheController customCacheController;
-    @Resource
-    private RedisUtil redisUtil;
 
     private MockMvc mockMvc;
 
@@ -69,7 +67,7 @@ public class CustomCacheControllerTest {
     public void test_method_cache_all() throws Exception {
         String cacheKey = "aop:method:cache:hello-all";
         check(cacheKey, "/cache/custom/default/all");
-        Long expire = redisUtil.getExpire(cacheKey);
+        Long expire = RedisUtil.defTemplate().getExpire(cacheKey);
         log.info("expire={}", expire);
         Assert.isTrue(expire <= 300, "固定缓存时长超过设定值");
     }
@@ -83,8 +81,8 @@ public class CustomCacheControllerTest {
      */
     private void check(String cacheKey, String urlTemplate) throws Exception {
         // 清除缓存
-        redisUtil.delete(cacheKey);
-        LocalCacheUtil.invalidate(cacheKey);
+        RedisUtil.defTemplate().delete(cacheKey);
+        LocalCacheUtil.delete(cacheKey);
 
         // 模拟请求
         RequestBuilder request = MockMvcRequestBuilders.get(urlTemplate)
@@ -108,9 +106,9 @@ public class CustomCacheControllerTest {
         log.info("mvcResult2={}", res2);
         Assert.isTrue(Objects.equals(res1, res2), "两次请求返回不一致");
 
-        String redisCacheData = JSONUtil.toJsonStr(redisUtil.get(cacheKey));
+        String redisCacheData = JSONUtil.toJsonStr(RedisUtil.opsValue().get(cacheKey));
         log.info("redisCacheData={}", redisCacheData);
-        String localCacheData = JSONUtil.toJsonStr(LocalCacheUtil.getIfPresent(cacheKey));
+        String localCacheData = JSONUtil.toJsonStr(LocalCacheUtil.get(cacheKey));
         log.info("localCacheData={}", localCacheData);
         if (ObjectUtil.isAllNotEmpty(redisCacheData, localCacheData)) {
             Assert.isTrue(Objects.equals(redisCacheData, localCacheData), "redis缓存与本地缓存数据不一致");
