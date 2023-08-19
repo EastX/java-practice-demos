@@ -46,7 +46,7 @@ public class CustomCacheController {
      */
     @GetMapping("/default/all")
     @MethodCacheable(key = "hello-all", keyType = AspectKeyTypeEnum.DEFAULT, unless = "${#id<0}",
-            timeout = 300, unit = TimeUnit.SECONDS, addRandomDuration = false, useLocal = true,
+            timeout = 300, unit = TimeUnit.SECONDS, addRandTtl = false, useLocal = true,
             localTimeout = 60)
     public ResponseResult<String> exactMatchAll(Long id) {
         id += RandomUtil.randomLong();

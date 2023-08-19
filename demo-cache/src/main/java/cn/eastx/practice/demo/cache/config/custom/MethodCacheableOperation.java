@@ -2,6 +2,7 @@ package cn.eastx.practice.demo.cache.config.custom;
 
 import cn.eastx.practice.common.util.AspectUtil;
 import cn.eastx.practice.demo.cache.constants.AspectKeyTypeEnum;
+import cn.eastx.practice.demo.cache.util.L2CacheUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.Data;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -36,14 +37,9 @@ public class MethodCacheableOperation {
     private Duration duration;
 
     /**
-     * 是否使用本地缓存
+     * 二级缓存配置
      */
-    private Boolean useLocal;
-
-    /**
-     * 本地缓存时长，单位秒
-     */
-    private Long localDuration;
+    private L2CacheUtil.Config l2Config;
 
     private MethodCacheableOperation() {}
 
@@ -75,7 +71,7 @@ public class MethodCacheableOperation {
         }
 
         Duration duration = Duration.ofSeconds(annotation.unit().toSeconds(annotation.timeout()));
-        if (annotation.addRandomDuration()) {
+        if (annotation.addRandTtl()) {
             // 增加随机时长 5 - 30 秒
             duration = duration.plusSeconds(ThreadLocalRandom.current().nextInt(5, 30));
         }
@@ -83,8 +79,11 @@ public class MethodCacheableOperation {
         MethodCacheableOperation operation = new MethodCacheableOperation();
         operation.setKey(key);
         operation.setDuration(duration);
-        operation.setUseLocal(annotation.useLocal());
-        operation.setLocalDuration(annotation.localTimeout());
+        operation.setL2Config(L2CacheUtil.Config.builder()
+                .useL1(annotation.useLocal())
+                .durationL1(annotation.localTimeout())
+                .compress(annotation.compress())
+                .build());
         return operation;
     }
 

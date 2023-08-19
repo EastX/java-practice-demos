@@ -57,7 +57,7 @@ public @interface MethodCacheable {
      * 
      * @see MethodCacheableOperation#convert(ProceedingJoinPoint) 注解转换为操作对象
      */
-    boolean addRandomDuration() default true;
+    boolean addRandTtl() default true;
 
     /**
      * 是否使用本地缓存
@@ -71,8 +71,14 @@ public @interface MethodCacheable {
      * 本地缓存时长，单位秒
      *  注意：本地缓存存在全局最大时长限制
      *
-     * @see cn.eastx.practice.demo.cache.util.LocalCacheUtil#getCache() 本地缓存初始化
+     * @see cn.eastx.practice.demo.cache.util.LocalCacheUtil 本地缓存
      */
     long localTimeout() default 30;
+
+    /**
+     * 是否开启对象压缩
+     * 对象过大将大量占用 Redis 内存及带宽，非必要进行压缩处理
+     */
+    boolean compress() default true;
 
 }
