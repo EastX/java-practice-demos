@@ -1,5 +1,6 @@
 package cn.eastx.practice.common.util;
 
+import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -10,6 +11,7 @@ import org.springframework.lang.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Map;
 
 /**
@@ -52,6 +54,24 @@ public class AspectUtil {
 
         // 4. 执行解析转换
         return parser.parseExpression(spelStr, template).getValue(context, desiredResultType);
+    }
+
+    /**
+     * 构建SpEL上下文变量
+     *
+     * @param method 方法
+     * @param args 方法参数
+     * @return SpEL上下文变量Map
+     */
+    public static Map<String, Object> buildSpelVars(Method method, Object[] args) {
+        Parameter[] methodParameters = method.getParameters();
+
+        Map<String, Object> resultMap = Maps.newHashMapWithExpectedSize(methodParameters.length);
+        for (int i = 0; i < methodParameters.length; i++) {
+            resultMap.put(methodParameters[i].getName(), args[i]);
+        }
+
+        return resultMap;
     }
 
     /**

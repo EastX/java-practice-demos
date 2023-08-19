@@ -1,12 +1,13 @@
 package cn.eastx.practice.demo.cache.config.spring;
 
-import cn.eastx.practice.demo.cache.util.AspectUtil;
+import cn.eastx.practice.common.util.AspectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -29,7 +30,8 @@ public class ExpandKeyGenerator implements KeyGenerator {
         }
 
         // SpEL 支持
-        return AspectUtil.convertSpelValue(annotation.spelKey(), method, params, String.class);
+        Map<String, Object> spelVars = AspectUtil.buildSpelVars(method, params);
+        return AspectUtil.parseSpel(annotation.spelKey(), spelVars, String.class);
     }
 
 }

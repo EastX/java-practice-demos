@@ -1,7 +1,7 @@
 package cn.eastx.practice.demo.cache.config.custom;
 
+import cn.eastx.practice.common.util.AspectUtil;
 import cn.eastx.practice.demo.cache.constants.AspectKeyTypeEnum;
-import cn.eastx.practice.demo.cache.util.AspectUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.Data;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -9,6 +9,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -59,8 +60,8 @@ public class MethodCacheableOperation {
             return null;
         }
 
-        Boolean isUnless = AspectUtil.convertSpelValue(annotation.unless(), method,
-                joinPoint.getArgs(), Boolean.class);
+        Map<String, Object> spelVars = AspectUtil.buildSpelVars(method, joinPoint.getArgs());
+        Boolean isUnless = AspectUtil.parseSpel(annotation.unless(), spelVars, Boolean.class);
         if (Boolean.TRUE.equals(isUnless)) {
             // 匹配条件不满足
             return null;

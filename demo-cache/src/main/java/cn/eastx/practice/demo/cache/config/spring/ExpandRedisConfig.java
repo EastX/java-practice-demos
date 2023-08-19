@@ -1,6 +1,6 @@
 package cn.eastx.practice.demo.cache.config.spring;
 
-import cn.eastx.practice.demo.cache.util.JsonUtil;
+import cn.eastx.practice.common.util.JsonUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,7 +59,7 @@ public class ExpandRedisConfig {
             使用 Jackson 作为值序列化处理器
             FastJson 存在部分转换问题如：Set 存储后因为没有对应的类型保存无法转换为 JSONArray（实现 List ） 导致失败
          */
-        ObjectMapper om = JsonUtil.createJacksonObjectMapper();
+        ObjectMapper om = JsonUtil.defFacade().getObjectMapper();
         GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer(om);
 
         // 配置key、value 序列化（解决乱码的问题）

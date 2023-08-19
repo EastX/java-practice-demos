@@ -1,6 +1,6 @@
 package cn.eastx.practice.demo.cache.constants;
 
-import cn.eastx.practice.demo.cache.util.AspectUtil;
+import cn.eastx.practice.common.util.AspectUtil;
 import cn.eastx.practice.demo.cache.util.IpUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -9,6 +9,7 @@ import lombok.Data;
 import org.springframework.lang.Nullable;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 
 /**
  * AOP 切面 key 类型枚举
@@ -60,8 +61,8 @@ public enum AspectKeyTypeEnum {
     METHOD_SPEL_PARAM {
         @Override
         public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
-            String paramStr = AspectUtil.convertSpelValue(data.getKey(), method, methodParams,
-                    String.class);
+            Map<String, Object> spelVars = AspectUtil.buildSpelVars(method, methodParams);
+            String paramStr = AspectUtil.parseSpel(data.getKey(), spelVars, String.class);
             return data.getPrefix() + AspectUtil.getMethodKey(method, paramStr);
         }
     },
@@ -74,8 +75,8 @@ public enum AspectKeyTypeEnum {
     SPEL {
         @Override
         public String obtainTypeKey(Method method, Object[] methodParams, KeyTypeData data) {
-            return data.getPrefix() + AspectUtil.convertSpelValue(data.getKey(), method,
-                    methodParams, String.class);
+            Map<String, Object> spelVars = AspectUtil.buildSpelVars(method, methodParams);
+            return data.getPrefix() + AspectUtil.parseSpel(data.getKey(), spelVars, String.class);
         }
     },
     /**
