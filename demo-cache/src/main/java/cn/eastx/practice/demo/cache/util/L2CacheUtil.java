@@ -8,17 +8,21 @@ import cn.eastx.practice.common.util.GeneralUtil;
 import cn.eastx.practice.common.util.IEnum;
 import cn.eastx.practice.common.util.JsonUtil;
 import cn.eastx.practice.demo.cache.config.RedisSubscriber;
+import com.google.common.collect.Maps;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.lang.Nullable;
 
 import java.time.Duration;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -66,7 +70,7 @@ public class L2CacheUtil implements RedisSubscriber {
     @Nullable
     public static Object get(String key, Config config) {
         Object val = getStoreVal(key, config);
-        return convertCacheData(val, config);
+        return parseCacheData(val, config);
     }
 
     /**
@@ -101,6 +105,111 @@ public class L2CacheUtil implements RedisSubscriber {
     }
 
     /**
+     * 获取 key 与 值 对应Map
+     *
+     * @param keys 缓存Key
+     * @return key 与 值 对应Map
+     */
+    public static Map<String, Object> get(Collection<String> keys) {
+        return get(keys, DEFAULT_CONFIG);
+    }
+
+    /**
+     * 获取 key 与 值 对应Map
+     *
+     * @param keys 缓存Key集合
+     * @param config 其它配置
+     * @return key 与 值 对应Map
+     */
+    public static Map<String, Object> get(Collection<String> keys, Config config) {
+        return get(keys, config, true);
+    }
+
+    /**
+     * 获取 key 与 值 对应Map
+     *
+     * @param keys 缓存Key集合
+     * @param config 其它配置
+     * @param getAll 是否两级缓存都进行查询，不然获取一级缓存数据不为空将直接返回
+     * @return key 与 值 对应Map
+     */
+    public static Map<String, Object> get(Collection<String> keys, Config config, boolean getAll) {
+        Map<String, Object> kvMap = getStoreVal(keys, config, getAll);
+
+        Map<String, Object> resultMap = Maps.newHashMapWithExpectedSize(kvMap.size());
+        for (Map.Entry<String, Object> entry : kvMap.entrySet()) {
+            resultMap.put(entry.getKey(), parseCacheData(entry.getValue(), config));
+        }
+
+        return resultMap;
+    }
+
+    /**
+     * 获取 key 与 值 对应Map
+     * 注意：如果本地缓存存在部分数据，其它数据不会根据Redis获取
+     *
+     * @param keys 缓存Key集合
+     * @param config 其它配置
+     * @param getAll 是否两级缓存都进行查询，不然获取一级缓存数据不为空将直接返回
+     * @return key 与 值 对应Map
+     */
+    public static Map<String, Object> getStoreVal(Collection<String> keys, Config config, boolean getAll) {
+        keys = new HashSet<>(keys);
+        if (GeneralUtil.isEmpty(keys)) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, Object> resultMap = new HashMap<>();
+        if (config.isUseL1()) {
+            // 从 L1 本地缓存中获取数据
+            resultMap.putAll(LocalCacheUtil.get(keys));
+            if (GeneralUtil.isNotEmpty(resultMap) && !getAll) {
+                return resultMap;
+            }
+
+            keys.removeAll(resultMap.keySet());
+        }
+
+        // 从 L2 Redis 缓存中获取数据
+        List<String> sortKeys = new ArrayList<>(keys);
+        List<Object> valList = redisTemplate().opsForValue().multiGet(sortKeys);
+        for (int i = 0, size = sortKeys.size(); i < size; i++) {
+            resultMap.put(sortKeys.get(i), valList.get(i));
+        }
+
+        return resultMap;
+    }
+
+    /**
+     * 转换缓存数据
+     *
+     * @param data 缓存数据
+     * @return 实际返回数据
+     */
+    public static Object parseCacheData(Object data, Config config) {
+        if (!(data instanceof String)) {
+            return data;
+        }
+
+        String dataStr = (String) data;
+
+        // 缓存特殊值处理
+        for (SpecialVal valEnum : SpecialVal.values()) {
+            if (valEnum.canConvert(dataStr)) {
+                return valEnum.convertVal(dataStr);
+            }
+        }
+
+        // 非特殊值处理
+        if (!config.isCompress()) {
+            // 不开启对象压缩
+            return data;
+        }
+
+        return CompressUtil.uncompressObj(dataStr, Object.class);
+    }
+
+    /**
      * 设置缓存数据
      *
      * @param key 缓存Key
@@ -121,6 +230,59 @@ public class L2CacheUtil implements RedisSubscriber {
      * @param config 是否压缩
      */
     public static void set(String key, Object value, long duration, Config config) {
+        set(Collections.singleton(key), value, duration, config, redisTemplate());
+    }
+
+    /**
+     * 设置缓存数据
+     *
+     * @param keys 缓存Key集合
+     * @param value 缓存数据
+     * @param duration 缓存时长，单位秒
+
+     */
+    public static void set(Collection<String> keys, Object value, long duration) {
+        set(keys, value, duration, DEFAULT_CONFIG);
+    }
+
+    /**
+     * 设置缓存数据
+     *
+     * @param keys 缓存Key集合
+     * @param value 缓存数据
+     * @param duration 缓存时长，单位秒
+     * @param config 是否压缩
+     */
+    public static void set(Collection<String> keys, Object value, long duration, Config config) {
+        if (GeneralUtil.isEmpty(keys)) {
+            return;
+        } else if (keys.size() == 1) {
+            set(keys.iterator().next(), value, duration, config);
+            return;
+        }
+
+        redisTemplate().executePipelined(new SessionCallback<Object>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                RedisTemplate<String, Object> template = (RedisTemplate<String, Object>) operations;
+
+                set(keys, value, duration, config, template);
+
+                return null;
+            }
+        });
+    }
+
+    /**
+     * 设置缓存数据
+     *
+     * @param keys 缓存Key集合
+     * @param value 缓存数据
+     * @param duration 缓存时长，单位秒
+     * @param config 是否压缩
+     */
+    private static void set(Collection<String> keys, Object value, long duration, Config config,
+                            RedisTemplate<String, Object> template) {
         Object cacheVal = null;
 
         // 缓存特殊值处理
@@ -140,13 +302,19 @@ public class L2CacheUtil implements RedisSubscriber {
             cacheVal = config.isCompress() ? CompressUtil.compressObj(value) : value;
         }
 
-        if (config.isUseL1()) {
-            LocalCacheUtil.set(key, cacheVal, durationL1);
-            // 通过发布订阅通知数据变更清除本地缓存
-            redisTemplate().convertAndSend(DATA_CHANGE_TOPIC, key);
+        // 缓存处理
+        boolean useL1 = config.isUseL1();
+        if (useL1) {
+            LocalCacheUtil.set(keys, cacheVal, durationL1);
         }
 
-        redisTemplate().opsForValue().set(key, cacheVal, Duration.ofSeconds(duration));
+        for (String key : keys) {
+            template.opsForValue().set(key, cacheVal, Duration.ofSeconds(duration));
+            if (useL1) {
+                // 通过发布订阅通知数据变更清除本地缓存
+                template.convertAndSend(DATA_CHANGE_TOPIC, key);
+            }
+        }
     }
 
     /**
@@ -178,35 +346,6 @@ public class L2CacheUtil implements RedisSubscriber {
 
         logger.debug("[L2CacheUtil]清除本地缓存 END, cacheKey={}, value IS NULL={}",
                 cacheKey, LocalCacheUtil.get(cacheKey) == null);
-    }
-
-    /**
-     * 转换缓存数据
-     *
-     * @param data 缓存数据
-     * @return 实际返回数据
-     */
-    public static Object convertCacheData(Object data, Config config) {
-        if (!(data instanceof String)) {
-            return data;
-        }
-
-        String dataStr = (String) data;
-
-        // 缓存特殊值处理
-        for (SpecialVal valEnum : SpecialVal.values()) {
-            if (valEnum.canConvert(dataStr)) {
-                return valEnum.convertVal(dataStr);
-            }
-        }
-
-        // 非特殊值处理
-        if (!config.isCompress()) {
-            // 不开启对象压缩
-            return data;
-        }
-
-        return CompressUtil.uncompressObj(dataStr, Object.class);
     }
 
     /**

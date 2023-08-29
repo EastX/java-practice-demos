@@ -123,7 +123,7 @@ public class SpyMemcachedUtil {
 
         try {
             transcoder = ObjectUtil.defaultIfNull(transcoder, client.getTranscoder());
-            Future<Boolean> f = client.set(key, expire, value);
+            Future<Boolean> f = client.set(key, expire, value, transcoder);
             return getBooleanValue(f);
         } catch (Exception e) {
             logger.error(GeneralUtil.formatMsg(

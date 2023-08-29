@@ -42,7 +42,7 @@ public class MethodCacheAspect {
 
         Object result = getCacheData(operation);
         if (Objects.nonNull(result)) {
-            return convertCacheData(result, operation);
+            return parseCacheData(result, operation);
         }
 
         try {
@@ -50,7 +50,7 @@ public class MethodCacheAspect {
             synchronized (operation.getKey().intern()) {
                 result = getCacheData(operation);
                 if (Objects.nonNull(result)) {
-                    return convertCacheData(result, operation);
+                    return parseCacheData(result, operation);
                 }
 
                 result = joinPoint.proceed();
@@ -83,8 +83,8 @@ public class MethodCacheAspect {
      * @return 转换后实际返回的数据
      * @see MethodCacheAspect#setDataCache(MethodCacheableOperation, Object) 设置数据缓存
      */
-    private Object convertCacheData(Object data, MethodCacheableOperation operation) {
-        return L2CacheUtil.convertCacheData(data, operation.getL2Config());
+    private Object parseCacheData(Object data, MethodCacheableOperation operation) {
+        return L2CacheUtil.parseCacheData(data, operation.getL2Config());
     }
 
     /**
@@ -93,7 +93,7 @@ public class MethodCacheAspect {
      *
      * @param operation 操作数据
      * @param data 数据
-     * @see MethodCacheAspect#convertCacheData(Object, MethodCacheableOperation)  转换缓存中的特殊值
+     * @see MethodCacheAspect#parseCacheData(Object, MethodCacheableOperation)  转换缓存中的特殊值
      */
     private void setDataCache(MethodCacheableOperation operation, Object data) {
         L2CacheUtil.set(operation.getKey(), data, operation.getDuration().getSeconds(),
