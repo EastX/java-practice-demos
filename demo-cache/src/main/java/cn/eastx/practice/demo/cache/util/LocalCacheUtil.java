@@ -3,14 +3,16 @@ package cn.eastx.practice.demo.cache.util;
 import cn.eastx.practice.common.util.GeneralUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.common.collect.Maps;
+import com.github.benmanes.caffeine.cache.Expiry;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.index.qual.NonNegative;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.lang.Nullable;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -25,13 +27,36 @@ public class LocalCacheUtil {
     /**
      * 本地缓存单例
      */
-    private volatile static Cache<String, Cache<String, Object>> cache;
-    /**
-     * 内部KEY
-     */
-    private static String INNER_KEY = "L1:INNER:KEY";
+    private static volatile Cache<String, Object> cache;
+    /** 最大缓存数量 */
+    private static final int MAX_NUM = 100;
+    /** 最大过期时长 */
+    private static final long MAX_TTL = TimeUnit.MINUTES.toMillis(5);
 
     private LocalCacheUtil() {}
+
+    /**
+     * 获取缓存对象
+     *  DCL获取缓存实例，注意存在时长限制
+     *
+     * @return 缓存对象
+     */
+    public static Cache<String, Object> getCache() {
+        if (cache == null) {
+            synchronized (LocalCacheUtil.class) {
+                if (cache == null) {
+                    cache = Caffeine.newBuilder()
+                            // 缓存最大长度
+                            .maximumSize(MAX_NUM)
+                            // 自定义缓存过期策略
+                            .expireAfter(new CacheExpiry())
+                            .build();
+                }
+            }
+        }
+
+        return cache;
+    }
 
     /**
      * 根据 key 获取值，不存在返回null
@@ -42,9 +67,7 @@ public class LocalCacheUtil {
      */
     @Nullable
     public static Object get(String key) {
-        return Optional.ofNullable(getCache().getIfPresent(key))
-                .map(dataCache -> dataCache.getIfPresent(INNER_KEY))
-                .orElse(null);
+        return getCache().getIfPresent(key);
     }
 
     /**
@@ -58,18 +81,7 @@ public class LocalCacheUtil {
             return Collections.emptyMap();
         }
 
-        Map<String, Cache<String, Object>> dcMap = getCache().getAllPresent(keys);
-
-        Map<String, Object> resultMap = Maps.newHashMapWithExpectedSize(dcMap.size());
-        for (Map.Entry<String, Cache<String, Object>> entry : dcMap.entrySet()) {
-            Object val = Optional.ofNullable(entry.getValue())
-                    .map(dc -> dc.getIfPresent(INNER_KEY)).orElse(null);
-            if (val != null) {
-                resultMap.put(entry.getKey(), val);
-            }
-        }
-
-        return resultMap;
+        return getCache().getAllPresent(keys);
     }
 
     /**
@@ -84,7 +96,9 @@ public class LocalCacheUtil {
             return;
         }
 
-        getCache().put(key, buildInnerCache(value, duration));
+        Duration ttl = Duration.ofSeconds(Math.min(duration, MAX_TTL));
+        getCache().policy().expireVariably().ifPresent(e ->
+                e.put(key, value, ttl));
     }
 
     /**
@@ -99,28 +113,12 @@ public class LocalCacheUtil {
             return;
         }
 
-        Cache<String, Object> dataCache = buildInnerCache(value, duration);
-
-        Map<String, Cache<String, Object>> cacheMap = Maps.newHashMapWithExpectedSize(keys.size());
-        for (String key : keys) {
-            cacheMap.put(key, dataCache);
-        }
-
-        getCache().putAll(cacheMap);
-    }
-
-    /**
-     * 构建内部缓存
-     *
-     * @param value 缓存值
-     * @param duration 时长，单位：秒
-     * @return 内部缓存对象
-     */
-    private static Cache<String, Object> buildInnerCache(Object value, long duration) {
-        Cache<String, Object> dataCache = Caffeine.newBuilder()
-                .maximumSize(1).expireAfterWrite(duration, TimeUnit.SECONDS).build();
-        dataCache.put(INNER_KEY, value);
-        return dataCache;
+        Duration ttl = Duration.ofSeconds(Math.min(duration, MAX_TTL));
+        getCache().policy().expireVariably().ifPresent(e -> {
+            for (String key : keys) {
+                e.put(key, value, ttl);
+            }
+        });
     }
 
     /**
@@ -134,26 +132,56 @@ public class LocalCacheUtil {
     }
 
     /**
-     * 获取缓存对象
-     *  DCL获取缓存实例，注意存在时长限制
+     * 缓存过期策略
      *
-     * @return 缓存对象
+     * https://blog.csdn.net/AdobePeng/article/details/127773031
+     * https://www.cnblogs.com/victorbu/p/17495469.html
      */
-    private static Cache<String, Cache<String, Object>> getCache() {
-        if (cache == null) {
-            synchronized (LocalCacheUtil.class) {
-                if (cache == null) {
-                    cache = Caffeine.newBuilder()
-                            // 缓存最大长度
-                            .maximumSize(100)
-                            // 全局最大缓存5分钟
-                            .expireAfterWrite(5, TimeUnit.MINUTES)
-                            .build();
-                }
-            }
+    static class CacheExpiry implements Expiry<String, Object> {
+
+        /**
+         * 创建后过期策略
+         *
+         * @param currentTime 当前时间往后算，多长时间过期，单位：纳秒
+         * @return 剩余多长时间过期，单位：纳秒
+         */
+        @Override
+        public long expireAfterCreate(@NonNull String key, @NonNull Object value, long currentTime) {
+            log.debug("[CacheExpiry]expireAfterCreate, key={}, value={}, time={}",
+                    key, value, currentTime);
+            return MAX_TTL;
         }
 
-        return cache;
+        /**
+         * 更新后过期策略
+         *
+         * @param currentTime     当前时间往后算，多长时间过期，单位：纳秒
+         * @param currentDuration 剩余多长时间过期，单位：纳秒
+         * @return 剩余多长时间过期，单位：纳秒
+         */
+        @Override
+        public long expireAfterUpdate(@NonNull String key, @NonNull Object value,
+                                      long currentTime, @NonNegative long currentDuration) {
+            log.debug("[CacheExpiry]expireAfterUpdate, key={}, value={}, time={}, duration={}",
+                    key, value, currentTime, currentDuration);
+            return currentDuration;
+        }
+
+        /**
+         * 读取后过期策略
+         *
+         * @param currentTime     当前时间往后算，多长时间过期，单位：纳秒
+         * @param currentDuration 剩余多长时间过期，单位：纳秒
+         * @return 剩余多长时间过期，单位：纳秒
+         */
+        @Override
+        public long expireAfterRead(@NonNull String key, @NonNull Object value, long currentTime,
+                                    @NonNegative long currentDuration) {
+            log.debug("[CacheExpiry]expireAfterRead, key={}, value={}, time={}, duration={}",
+                    key, value, currentTime, currentDuration);
+            return currentDuration;
+        }
+
     }
 
 }
