@@ -1,4 +1,4 @@
-package cn.eastx.practice.demo.cache.util;
+package cn.eastx.practice.middleware.cache;
 
 import cn.eastx.practice.common.response.ResponseEnum;
 import org.springframework.data.redis.core.*;

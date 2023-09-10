@@ -1,5 +1,6 @@
-package cn.eastx.practice.common.util;
+package cn.eastx.practice.demo.cache.util;
 
+import cn.eastx.practice.common.util.GeneralUtil;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

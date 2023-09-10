@@ -1,6 +1,6 @@
 package cn.eastx.practice.demo.cache.config.spring;
 
-import cn.eastx.practice.common.util.AspectUtil;
+import cn.eastx.practice.demo.cache.util.AspectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import org.springframework.cache.interceptor.KeyGenerator;

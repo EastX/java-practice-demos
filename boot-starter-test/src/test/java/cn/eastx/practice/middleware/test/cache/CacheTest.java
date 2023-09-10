@@ -1,8 +1,8 @@
 package cn.eastx.practice.middleware.test.cache;
 
-import cn.eastx.practice.middleware.util.JsonUtil;
-import cn.eastx.practice.middleware.util.LocalCacheUtil;
-import cn.eastx.practice.middleware.util.RedisUtil;
+import cn.eastx.practice.common.util.JsonUtil;
+import cn.eastx.practice.middleware.cache.LocalCacheUtil;
+import cn.eastx.practice.middleware.cache.RedisUtil;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +27,6 @@ public class CacheTest {
 
     @Resource
     private CacheTestService cacheTestService;
-    @Resource
-    private RedisUtil redisUtil;
 
     @Test
     public void test_method_cache() throws Exception {
@@ -49,7 +47,7 @@ public class CacheTest {
 
         // _RAND
         cacheTestService.randNum();
-        logger.debug("localCacheMap={}", LocalCacheUtil.asMap());
+        logger.debug("localCacheMap={}", LocalCacheUtil.getCache().asMap());
     }
 
     /**
@@ -61,8 +59,8 @@ public class CacheTest {
      */
     private void check(String cacheKey, String methodName) throws Exception {
         // 清除缓存
-        redisUtil.delete(cacheKey);
-        LocalCacheUtil.invalidate(cacheKey);
+        RedisUtil.defTemplate().delete(cacheKey);
+        LocalCacheUtil.delete(cacheKey);
 
         Method method = CacheTestService.class.getMethod(methodName, Long.class);
 
@@ -71,10 +69,10 @@ public class CacheTest {
         logger.debug("res1={}, res2={}", res1, res2);
         Assert.isTrue(Objects.equals(res1, res2), "两次执行返回不一致");
 
-        Object redisData = Optional.ofNullable(redisUtil.get(cacheKey))
+        Object redisData = Optional.ofNullable(RedisUtil.opsValue().get(cacheKey))
                 .filter(data -> !"NULL-VALUE".equals(data)).orElse(null);
-        String redisCacheData = JsonUtil.toJsonStr(redisData);
-        String localCacheData = JsonUtil.toJsonStr(LocalCacheUtil.getIfPresent(cacheKey));
+        String redisCacheData = JsonUtil.toSimpleStr(redisData);
+        String localCacheData = JsonUtil.toSimpleStr(LocalCacheUtil.get(cacheKey));
         logger.debug("redisCacheData={}, localCacheData={}", redisCacheData, localCacheData);
         if (Objects.nonNull(localCacheData)) {
             Assert.isTrue(Objects.equals(redisCacheData, localCacheData), "redis缓存与本地缓存数据不一致");

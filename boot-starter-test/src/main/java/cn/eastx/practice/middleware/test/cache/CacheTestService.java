@@ -1,7 +1,6 @@
 package cn.eastx.practice.middleware.test.cache;
 
-import cn.eastx.practice.middleware.annotation.MethodCacheable;
-import cn.eastx.practice.middleware.constant.AspectKeyTypeEnum;
+import cn.eastx.practice.middleware.cache.MethodCacheable;
 import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +26,7 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(key = "hello-world", keyType = AspectKeyTypeEnum.DEFAULT, useLocal = true)
+    @MethodCacheable(key = "hello-world", useLocal = true)
     public String exactMatch(Long id) {
         id += RandomUtils.nextLong();
         logger.info("custom:default:{}", id);
@@ -41,8 +40,8 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(key = "hello-all", keyType = AspectKeyTypeEnum.DEFAULT, unless = "${#id<0}",
-            timeout = 300, unit = TimeUnit.SECONDS, addRandomDuration = false, useLocal = true,
+    @MethodCacheable(key = "hello-all",  unless = "${#id<0}",
+            timeout = 300, unit = TimeUnit.SECONDS, addRandTtl = false, useLocal = true,
             localTimeout = 60)
     public String exactMatchAll(Long id) {
         id += RandomUtils.nextLong();
@@ -57,7 +56,7 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(key = "hello-null", keyType = AspectKeyTypeEnum.DEFAULT, useLocal = false)
+    @MethodCacheable(key = "hello-null", useLocal = false)
     public String exactMatchNull(Long id) {
         id += RandomUtils.nextLong();
         logger.info("custom:default:null:{}", id);
@@ -71,7 +70,7 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(keyType = AspectKeyTypeEnum.METHOD, useLocal = true)
+    @MethodCacheable(useLocal = true)
     public String method(Long id) {
         id += RandomUtils.nextLong();
         logger.info("custom:method:{}", id);
@@ -85,7 +84,7 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(keyType = AspectKeyTypeEnum.METHOD_PARAM, useLocal = false)
+    @MethodCacheable(useLocal = false)
     public String methodParam(Long id) {
         id += RandomUtils.nextLong();
         logger.info("custom:method-param:{}", id);
@@ -99,8 +98,7 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(key = "custom:method-spel-param:${#id}",
-            keyType = AspectKeyTypeEnum.METHOD_SPEL_PARAM, useLocal = true)
+    @MethodCacheable(key = "custom:method-spel-param:${#id}", useLocal = true)
     public String methodSpelParam(Long id) {
         id += RandomUtils.nextLong();
         logger.info("custom:method-spel-param:{}", id);
@@ -114,7 +112,7 @@ public class CacheTestService {
      * @param id 传入id
      * @return 返回结果
      */
-    @MethodCacheable(key = "custom:spel:${#id}", keyType = AspectKeyTypeEnum.SPEL, useLocal = false)
+    @MethodCacheable(key = "custom:spel:${#id}", useLocal = false)
     public String spel(Long id) {
         id += RandomUtils.nextLong();
         logger.info("custom:spel:{}", id);
@@ -127,7 +125,7 @@ public class CacheTestService {
      *
      * @return 返回结果
      */
-    @MethodCacheable(key = "${#_RAND}", keyType = AspectKeyTypeEnum.SPEL, useLocal = true)
+    @MethodCacheable(key = "${#_RAND}", useLocal = true)
     public String randNum() {
         Long id = RandomUtils.nextLong();
         logger.info("custom:_RAND:{}", id);

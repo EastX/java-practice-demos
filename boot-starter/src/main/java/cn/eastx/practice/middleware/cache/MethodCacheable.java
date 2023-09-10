@@ -1,15 +1,8 @@
-package cn.eastx.practice.middleware.annotation;
+package cn.eastx.practice.middleware.cache;
 
-import cn.eastx.practice.middleware.aspect.MethodCacheAspect;
-import cn.eastx.practice.middleware.aspect.MethodCacheableOperation;
-import cn.eastx.practice.middleware.constant.AspectKeyTypeEnum;
-import cn.eastx.practice.middleware.util.LocalCacheUtil;
 import org.aspectj.lang.ProceedingJoinPoint;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,6 +16,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
+@Inherited
 public @interface MethodCacheable {
 
     /**
@@ -30,12 +24,7 @@ public @interface MethodCacheable {
      *  支持 SpEL 语法，示例：${#param}
      *  默认为空使用对应key为 类名+方法名+参数
      */
-    String key() default "";
-
-    /**
-     * AOP 切面 key 类型
-     */
-    AspectKeyTypeEnum keyType() default AspectKeyTypeEnum.DEFAULT;
+    String[] key() default {};
 
     /**
      * 缓存排除条件，指定条件不缓存处理
@@ -58,9 +47,9 @@ public @interface MethodCacheable {
      * 是否增加随机时长（防止缓存雪崩）
      *  注意：固定了随机时长，依据操作类的转换设定
      * 
-     * @see cn.eastx.practice.middleware.aspect.MethodCacheableOperation#convert(ProceedingJoinPoint) 注解转换为操作对象
+     * @see MethodCacheableOperation#convert(ProceedingJoinPoint) 注解转换为操作对象
      */
-    boolean addRandomDuration() default true;
+    boolean addRandTtl() default true;
 
     /**
      * 是否使用本地缓存
@@ -77,5 +66,11 @@ public @interface MethodCacheable {
      * @see LocalCacheUtil#getCache() 本地缓存初始化
      */
     long localTimeout() default 30;
+
+    /**
+     * 是否开启对象压缩
+     * 对象过大将大量占用 Redis 内存及带宽，非必要进行压缩处理
+     */
+    boolean compress() default true;
 
 }

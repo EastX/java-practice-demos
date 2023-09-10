@@ -1,6 +1,6 @@
 package cn.eastx.practice.demo.cache.config.custom;
 
-import cn.eastx.practice.common.util.AspectUtil;
+import cn.eastx.practice.demo.cache.util.AspectUtil;
 import cn.eastx.practice.demo.cache.constants.AspectKeyTypeEnum;
 import cn.eastx.practice.demo.cache.util.L2CacheUtil;
 import cn.hutool.core.util.StrUtil;

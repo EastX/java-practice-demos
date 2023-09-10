@@ -1,6 +1,6 @@
 package cn.eastx.practice.middleware.util;
 
-import cn.eastx.practice.middleware.config.MiddlewareProperties;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.expression.common.TemplateParserContext;
@@ -11,6 +11,7 @@ import org.springframework.lang.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Map;
 
 /**
  * AOP 切面工具类
@@ -20,77 +21,55 @@ import java.lang.reflect.Parameter;
  */
 public class AspectUtil {
 
+    /** SpEL 解析器 */
+    private static final SpelExpressionParser SPEL_PARSER = new SpelExpressionParser();
+    /** SpEL解析模板 */
+    private static final TemplateParserContext SPEL_TEMPLATE =
+            new TemplateParserContext("${", "}");
+
     private AspectUtil() {}
+
+    /**
+     * 构建SpEL上下文变量
+     *
+     * @param method 方法
+     * @param args 方法参数
+     * @return SpEL上下文变量Map
+     */
+    public static Map<String, Object> buildSpelVars(Method method, Object[] args) {
+        Parameter[] methodParameters = method.getParameters();
+
+        Map<String, Object> resultMap = Maps.newHashMapWithExpectedSize(methodParameters.length);
+        for (int i = 0; i < methodParameters.length; i++) {
+            resultMap.put(methodParameters[i].getName(), args[i]);
+        }
+
+        return resultMap;
+    }
 
     /**
      * 转换 SpEL 解析表达式
      * 示例：${1==1} => true
      *
-     * @param spelStr SpEL字符串
-     * @param method 方法对象
-     * @param params 方法参数数组
+     * @param spelStr           SpEL字符串
+     * @param variables         上下文变量 名称与值 对应Map
      * @param desiredResultType 期望结果类型
      * @return 转换 SpEL 表达式后的值
      */
     @Nullable
-    public static <T> T convertSpelValue(String spelStr, Method method, Object[] params,
-                                         @Nullable Class<T> desiredResultType) {
+    public static <T> T parseSpel(String spelStr, Map<String, Object> variables,
+                                  @Nullable Class<T> desiredResultType) {
         if (StringUtils.isBlank(spelStr)) {
             return null;
         }
 
         // 1. 创建SpEL上下文
-        StandardEvaluationContext context = createSpelContext(method, params);
-
-        // 2. 创建解析器
-        SpelExpressionParser parser = new SpelExpressionParser();
-
-        // 3. 创建解析模板
-        TemplateParserContext template = new TemplateParserContext("${", "}");
-
-        // 4. 执行解析转换
-        return parser.parseExpression(spelStr, template).getValue(context, desiredResultType);
-    }
-
-    /**
-     * 创建 SpEL 字符串上下文
-     *
-     * @param method 方法对象
-     * @param params 方法参数值
-     * @return SpEL 表达式解析上下文
-     */
-    private static StandardEvaluationContext createSpelContext(Method method, Object[] params) {
         StandardEvaluationContext context = new StandardEvaluationContext();
+        context.setVariables(variables);
 
-        Parameter[] methodParameters = method.getParameters();
-        for (int i = 0; i < methodParameters.length; i++) {
-            context.setVariable(methodParameters[i].getName(), params[i]);
-        }
-
-        // 指定特殊值，根据配置
-        MiddlewareProperties.getSpelContexts().forEach(item ->
-                context.setVariable(item.getName(), item.invokeValue()));
-
-        return context;
-    }
-
-    /**
-     * 获取方法 key（类名 + # + 方法名 + (param)）
-     *
-     * @param method 方法对象
-     * @param param 参数
-     * @return 方法 key
-     */
-    public static String getMethodKey(Method method, String param) {
-        StringBuilder sb = new StringBuilder()
-                .append(method.getDeclaringClass().getSimpleName())
-                .append("#")
-                .append(method.getName());
-        if (StringUtils.isNotBlank(param)) {
-            sb.append("(").append(param).append(")");
-        }
-
-        return sb.toString();
+        // 2. 执行解析转换
+        return SPEL_PARSER.parseExpression(spelStr, SPEL_TEMPLATE)
+                .getValue(context, desiredResultType);
     }
 
     /**
